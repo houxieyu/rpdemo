@@ -3,6 +3,7 @@ require([
     "esri/toolbars/draw",
     "esri/toolbars/edit",
     "esri/graphic",
+    "esri/layers/FeatureLayer",
 
     "esri/symbols/SimpleMarkerSymbol",
     "esri/symbols/SimpleLineSymbol",
@@ -11,21 +12,42 @@ require([
     "dojo/parser", 
      "dojo/domReady!"
   ], function(
-    Map, Draw, Edit,Graphic,
+    Map, Draw, Edit,Graphic,FeatureLayer,
     SimpleMarkerSymbol, SimpleLineSymbol, SimpleFillSymbol,event,
     parser
   ) {
     parser.parse();
-    map = new Map("map", {
+    var map = new Map("map", {
         basemap: "streets",
         center: [-15.469, 36.428],
         zoom: 3
       });
+      var fsurl = 'http://124.133.27.90:6080/arcgis/rest/services/sdbj/FeatureServer/';
+      var areacode = '370102001001'
+      var layerShiBJ = new FeatureLayer(fsurl+"0", new layerpars(''));
+      var layerXianBJ = new FeatureLayer(fsurl+"1",  new layerpars('1=2'));
+      var layerXiangBJ = new FeatureLayer(fsurl+"2", new layerpars('1=2'));
+      var layerCunBJ = new FeatureLayer(fsurl+"3",  new layerpars('1=2'));
+      var layerBuilding = new FeatureLayer(fsurl+"4",  new layerpars('1=2'));
+      layers = [ layerShiBJ, layerXianBJ, layerXiangBJ, layerCunBJ,layerBuilding];
+      layerCunBJ.setDefinitionExpression("AREA_CODE like '"+areacode+"%' or AREA_CODE is null");
+      layerBuilding.setDefinitionExpression("AREA_CODE like '"+areacode+"%' or AREA_CODE is null");
+      map.addLayers(layers);
+
       
     map.on("load", createToolbar);
     $('#ui button').click(function(){
         activateTool($(this).attr('data-type'));
     });
+
+    function layerpars(DefinitionExpression) {
+        this.mode = FeatureLayer.MODE_SNAPSHOT;
+        this.outFields= ["*"];
+        this.showLabels= true;
+        this.minScale=0;
+        this.maxScale=0;
+        this.definitionExpression=DefinitionExpression;
+    }
 
     function activateTool(tooltype) {
         toolbar.activate(Draw[tooltype]);
@@ -65,7 +87,12 @@ require([
             break;
         }
         var graphic = new Graphic(evt.geometry, symbol);
-        map.graphics.add(graphic);
+        // map.graphics.add(graphic);
+
+        //var newAttributes = lang.mixin({}, selectedTemplate.template.prototype.attributes);
+        var newGraphic = new Graphic(evt.geometry, null, {});
+        layerBuilding.applyEdits([newGraphic], null, null);
+
       }
 
       function activateToolbar(graphic) {
