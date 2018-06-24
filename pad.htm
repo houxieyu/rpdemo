@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width,user-scalable=no">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>普查区建筑物标绘PAD端</title>
+    <style>
+        html,
+        body,
+        #map {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            width: 100%;
+        }
+        #ui {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            z-index: 100;
+        }
+        /* #titleInfo {
+            position:absolute;
+            left:60px;
+            top:0px;
+            color: lightslategray;
+            font-family: Lucida Grande, Helvetica, sans-serif;
+            z-index: 100;
+        } */
+    </style>
+    <link rel="stylesheet" href="http://124.133.27.90:6081/arcgis_js_api3.18/library/3.18/3.18/dijit/themes/claro/claro.css" />
+    <link rel="stylesheet" href="http://124.133.27.90:6081/arcgis_js_api3.18/library/3.18/3.18/esri/css/esri.css" />
+    <script src="http://124.133.27.90:6081/arcgis_js_api3.18/library/3.18/3.18/init.js"></script>
+        <script src="jquery.min.js"></script>
+        <script src="pad.js"></script>
+</head>
+
+<body>
+    <div id="map">
+        <!-- <div id="titleInfo">
+            <span id="titletext">GIS3D可视化技术展示</span>
+        </div> -->
+        <div id="ui">
+            建筑物绘制工具
+            <button id="bt_freehand" data-type="FREEHAND_POLYGON">自由绘制</button>
+            <button id="bt_rectangle" data-type="RECTANGLE">矩形</button>
+            <button id="bt_Langle">L形</button>
+            <button id="bt_aoangle">凹形</button>
+            <button id="bt_triangle" data-type="TRIANGLE">三角形</button>
+            <button id="bt_circle" data-type="CIRCLE">圆形</button>
+            <button id="bt_ellipse" data-type="ELLIPSE">椭圆</button>
+            <!--<button id="btpiao">开启飘窗</button>-->
+            <br>
+        </div>
+    </div>
+</body>
+
+</html>
