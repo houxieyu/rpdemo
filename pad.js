@@ -1,10 +1,14 @@
 require([
-    "esri/map",
+    "esri/map","esri/dijit/BasemapToggle",
+    "dojo/dom",
+    "esri/dijit/Measurement",
     "esri/toolbars/draw",
     "esri/toolbars/edit",
     "esri/graphic",
+     "esri/tasks/GeometryService",
     "esri/layers/FeatureLayer",
-
+    "esri/renderers/UniqueValueRenderer",
+    "esri/symbols/PictureMarkerSymbol",
     "esri/symbols/SimpleMarkerSymbol",
     "esri/symbols/SimpleLineSymbol",
     "esri/symbols/SimpleFillSymbol",
@@ -12,17 +16,32 @@ require([
     "dojo/parser",
     "dojo/domReady!"
 ], function (
-    Map, Draw, Edit, Graphic, FeatureLayer,
+    Map,BasemapToggle,
+    dom,Measurement,
+    Draw, Edit, Graphic,GeometryService,
+    FeatureLayer,UniqueValueRenderer,PictureMarkerSymbol,
     SimpleMarkerSymbol, SimpleLineSymbol, SimpleFillSymbol, event, Query, AttributeInspector, domConstruct, Button,
     parser
 ) {
     parser.parse();
+    esriConfig.defaults.geometryService = new GeometryService("https://utility.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer");
     //初始化底图
     var map = new Map("map", {
         basemap: "streets",
         center: [117.05, 36.7],
         zoom: 12
     });
+        //测量工具
+        var measurement = new Measurement({
+            map: map
+          }, dom.byId("measurementDiv"));
+          measurement.startup();
+    //底图切换工具
+    var toggle = new BasemapToggle({
+        map: map,
+        basemap: "satellite"
+      }, "BasemapToggle");
+      toggle.startup();
 
     //初始化边界、建筑物图层
     var areacode = '370102008015'
@@ -31,11 +50,19 @@ require([
     var layerXiangBJ = new FeatureLayer(fsurl + "2", new layerpars('1=2'));
     //依据区划码，过滤村级边界和建筑物图层
     var layerCunBJ = new FeatureLayer(fsurl + "3", new layerpars("AREA_CODE like '" + areacode + "%' or AREA_CODE is null"));
-    var layerBuilding = new FeatureLayer(fsurl + "4", new layerpars("BuildCode like '" + areacode + "%' or BuildCode is null"));
+    var buildfilter = "BuildCode like '" + areacode + "%' or BuildCode is null";
+    var layerBuilding = new FeatureLayer(fsurl + "4", new layerpars(buildfilter));
+    var layerbuildingicon = new FeatureLayer(fsurl + "4", new layerpars(buildfilter)); 
+    //符号渲染器
+    var iconrenderer = new UniqueValueRenderer(new PictureMarkerSymbol('img/建筑.png', 20, 20), "btype");
+    iconrenderer.addValue('0',new PictureMarkerSymbol('img/住宅.png', 20, 20));
+    iconrenderer.addValue('1',new PictureMarkerSymbol('img/商业.png', 20, 20));
+    iconrenderer.addValue('2',new PictureMarkerSymbol('img/公用.png', 20, 20));
+    layerbuildingicon.setRenderer(iconrenderer);
     // var layerBuilding = new FeatureLayer(fsurl + "4");
-    layers = [layerShiBJ, layerXianBJ, layerXiangBJ, layerCunBJ, layerBuilding];
-    // map.addLayers(layers);
-    map.addLayer(layerBuilding)
+    layers = [layerShiBJ, layerXianBJ, layerXiangBJ, layerCunBJ, layerBuilding,layerbuildingicon];
+    map.addLayers(layers);
+    // map.addLayer(layerBuilding)
     //建筑物图层加载完成，将地图缩放至建筑物图层范围
     layerBuilding.on('update-end', function () {
         FullExtent();
@@ -71,6 +98,8 @@ require([
                     updateFeature = features[0];
                     map.infoWindow.setTitle('属性编辑');
                     map.infoWindow.show(evt.screenPoint, map.getInfoWindowAnchor(evt.screenPoint));
+                    $('.atiDeleteButton').removeClass('atiButton');
+                    $('.atiDeleteButton').addClass('dijitButton');
                 } else {
                     map.infoWindow.hide();
                 }
@@ -118,7 +147,7 @@ require([
     var attInspector = new AttributeInspector({
         layerInfos: layerInfos
     }, domConstruct.create("div"));
-    //add a save button next to the delete button
+    //添加保存按钮
     var saveButton = new Button({
         label: "保存"
     }, domConstruct.create("button", {
@@ -127,10 +156,13 @@ require([
         }
     }));
     domConstruct.place(saveButton.domNode, attInspector.deleteBtn.domNode, "after");
+    // console.log(attInspector.editButtons)
 
     saveButton.on("click", function () {
         updateFeature.getLayer().applyEdits(null, [updateFeature], null);
+        layerbuildingicon.applyEdits(null, [updateFeature], null);
         map.infoWindow.hide();
+        layerbuildingicon.redraw();
     });
 
     attInspector.on("attribute-change", function (evt) {
@@ -232,5 +264,6 @@ require([
         };
         editToolbar.activate(tool, graphic, options);
     }
+
 
 });

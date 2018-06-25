@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
@@ -22,38 +22,75 @@
             top: 10px;
             z-index: 100;
         }
+
+        #ui button i {
+            color: darkgreen
+        }
+
+        #BasemapToggle {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            z-index: 50;
+        }
+
+        #ui {
+            display: inline-block
+        }
     </style>
+    <!-- <link rel="stylesheet" href="layui/css/layui.css"> -->
+    <!-- <link rel="stylesheet" href="https://js.arcgis.com/3.18/esri/themes/calcite/dijit/calcite.css">
+    <link rel="stylesheet" href="https://js.arcgis.com/3.18/esri/themes/calcite/esri/esri.css"> -->
+    <link href="//netdna.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script src="conf.js"></script>
     <script type="text/javascript">
         document.write("<link rel='stylesheet' href='" + libpath + "/dijit/themes/claro/claro.css' />");
         document.write("<link rel='stylesheet' href='" + libpath + "/esri/css/esri.css' />");
         document.write("<script src='" + libpath + "/init.js'></scr" + "ipt>");
     </script>
-    <link href="bootstrap.min.css" rel="stylesheet">
-    <!-- <link rel="stylesheet" href="https://124.133.27.90:6082/arcgis_js_api3.18/library/3.18/3.18/dijit/themes/claro/claro.css" />
-    <link rel="stylesheet" href="https://124.133.27.90:6082/arcgis_js_api3.18/library/3.18/3.18/esri/css/esri.css" />
-    <script src="https://124.133.27.90:6082/arcgis_js_api3.18/library/3.18/3.18/init.js"></script> -->
+    <!-- <link href="bootstrap.min.css" rel="stylesheet"> -->
     <script src="jquery.min.js"></script>
     <script src="pad.js"></script>
 </head>
 
-<body>
-    <div id="map">
+<body class="claro">
+    <div id="map" >
         <!-- <div id="titleInfo">
             <span id="titletext">GIS3D可视化技术展示</span>
         </div> -->
+
         <div id="ui">
+
             <!-- 建筑物绘制工具 -->
-            <button id="bt_freehand" data-type="FREEHAND_POLYGON">自由绘制</button>
-            <button id="bt_rectangle" data-type="RECTANGLE">矩形</button>
-            <button id="bt_triangle" data-type="TRIANGLE">三角形</button>
-            <button id="bt_circle" data-type="CIRCLE">圆形</button>
-            <button id="bt_ellipse" data-type="ELLIPSE">椭圆</button>
-            <!--<button id="btpiao">开启飘窗</button>-->
-            <br>
-            <button id="bt_edit" data-tool="edit" data-cursor="hand">修改</button>
-            <button id="bt_attr" data-tool="attr" data-cursor="help">属性</button>
+            <div id='drawdtools'>
+                <button id="bt_freehand" data-type="FREEHAND_POLYGON">
+                    <i class="fa fa-pencil fa-lg"></i> 自由绘制</button>
+                <button id="bt_rectangle" data-type="RECTANGLE">
+                    <i class="fa fa-square fa-lg"></i> 矩形</button>
+                <button id="bt_triangle" data-type="TRIANGLE">
+                    <i class="fa fa-play fa-lg"></i> 三角形</button>
+                <button id="bt_circle" data-type="CIRCLE">
+                    <i class="fa fa-circle fa-lg"></i> 圆形</button>
+                <!-- <button id="bt_ellipse" data-type="ELLIPSE">
+                    <i class="fa fa-circle fa-lg"></i> 椭圆</button> -->
+                <!--<button id="btpiao">开启飘窗</button>-->
+            </div>
+            <div id='edittools'>
+                <button id="bt_edit" data-tool="edit" data-cursor="hand">
+                    <i class="fa fa-edit fa-lg"></i> 编辑图形</button>
+                <button id="bt_attr" data-tool="attr" data-cursor="help">
+                    <i class="fa fa-table fa-lg"></i> 属性</button>
+
+            </div>
+
         </div>
+        <div id='BasemapToggle'></div>
+        <!-- <div style="position:absolute; left:60px; top:10px; z-Index:999;">
+            <div id="titlePane1"  data-dojo-props="title:'测量工具', closable:false, open:false">
+                <div id="measurementDiv"></div>
+                <span style="font-size:smaller;padding:5px 5px;"></span>
+            </div>
+        </div> -->
     </div>
 </body>
 
