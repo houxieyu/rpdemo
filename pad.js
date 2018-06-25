@@ -242,13 +242,18 @@ require([
                 symbol = new SimpleFillSymbol();
                 break;
         }
-        var graphic = new Graphic(evt.geometry, symbol);
+        // var graphic = new Graphic(evt.geometry, symbol);
         // map.graphics.add(graphic);
 
         //var newAttributes = lang.mixin({}, selectedTemplate.template.prototype.attributes);
-        var newGraphic = new Graphic(evt.geometry, null, {});
-        layerBuilding.applyEdits([newGraphic], null, null);
+        var newGraphic = new Graphic(evt.geometry, null, {BuildCode:areacode,btype:0});
+        layerBuilding.applyEdits([newGraphic], null, null,function(){
+            layerbuildingicon.refresh();
+        });
 
+        // newGraphic = new Graphic(evt.geometry, null, {BuildCode:areacode,btype:0});
+        // layerbuildingicon.applyEdits([newGraphic], null, null);
+        
     }
     //激活编辑工具
     function activateEditTool(graphic) {
