@@ -20,8 +20,8 @@ require([
     //初始化底图
     var map = new Map("map", {
         basemap: "streets",
-        center: [-15.469, 36.428],
-        zoom: 3
+        center: [117.05, 36.7],
+        zoom: 12
     });
 
     //初始化边界、建筑物图层
@@ -32,8 +32,10 @@ require([
     //依据区划码，过滤村级边界和建筑物图层
     var layerCunBJ = new FeatureLayer(fsurl + "3", new layerpars("AREA_CODE like '" + areacode + "%' or AREA_CODE is null"));
     var layerBuilding = new FeatureLayer(fsurl + "4", new layerpars("BuildCode like '" + areacode + "%' or BuildCode is null"));
+    // var layerBuilding = new FeatureLayer(fsurl + "4");
     layers = [layerShiBJ, layerXianBJ, layerXiangBJ, layerCunBJ, layerBuilding];
-    map.addLayers(layers);
+    // map.addLayers(layers);
+    map.addLayer(layerBuilding)
     //建筑物图层加载完成，将地图缩放至建筑物图层范围
     layerBuilding.on('update-end', function () {
         FullExtent();
@@ -42,13 +44,13 @@ require([
     map.on("load", createToolbar);
     //根据按钮属性，激活相应绘图工具
     var curtool = "";
-    $('#ui button,[data-type]').click(function () {
+    $('#ui button[data-type]').click(function () {
         activateDrawTool($(this).attr('data-type'));
         curtool = "";
         // $('#map *').css("cursor", "default");
     });
     //根据按钮属性，激活编辑工具
-    $('#ui button,[data-tool]').click(function () {
+    $('#ui button[data-tool]').click(function () {
         curtool = $(this).attr('data-tool');
         // $('#map *').css("cursor", $(this).attr('data-cursor'));
     });
@@ -97,7 +99,7 @@ require([
                 'label': '建筑名称:'
             },
             {
-                'fieldName': 'BuildType',
+                'fieldName': 'btype',
                 'isEditable': true,
                 'label': '建筑物类型:'
             },
@@ -105,11 +107,6 @@ require([
                 'fieldName': 'LAYERNUM',
                 'isEditable': true,
                 'label': '层数:'
-            },
-            {
-                'fieldName': 'STRUCT',
-                'isEditable': true,
-                'label': '建筑结构:'
             },
             {
                 'fieldName': 'UnitCount',
@@ -121,20 +118,20 @@ require([
     var attInspector = new AttributeInspector({
         layerInfos: layerInfos
     }, domConstruct.create("div"));
-    // //add a save button next to the delete button
-    // var saveButton = new Button({
-    //     label: "保存"
-    // }, domConstruct.create("button", {
-    //     style: {
-    //         color: "red"
-    //     }
-    // }));
-    // domConstruct.place(saveButton.domNode, attInspector.deleteBtn.domNode, "after");
+    //add a save button next to the delete button
+    var saveButton = new Button({
+        label: "保存"
+    }, domConstruct.create("button", {
+        style: {
+            color: "red"
+        }
+    }));
+    domConstruct.place(saveButton.domNode, attInspector.deleteBtn.domNode, "after");
 
-    // saveButton.on("click", function () {
-    //     updateFeature.getLayer().applyEdits(null, [updateFeature], null);
-    //     map.infoWindow.hide();
-    // });
+    saveButton.on("click", function () {
+        updateFeature.getLayer().applyEdits(null, [updateFeature], null);
+        map.infoWindow.hide();
+    });
 
     attInspector.on("attribute-change", function (evt) {
         //store the updates to apply when the save button is clicked
@@ -160,8 +157,9 @@ require([
         require([
             "esri/graphicsUtils", "dojo/domReady!"
         ], function (graphicsUtils) {
+            if(layerBuilding.graphics.length>0){
             var myFeatureExtent = graphicsUtils.graphicsExtent(layerBuilding.graphics);
-            map.setExtent(myFeatureExtent);
+            map.setExtent(myFeatureExtent);}
         });
     }
 
@@ -169,9 +167,9 @@ require([
     function layerpars(DefinitionExpression) {
         this.mode = FeatureLayer.MODE_SNAPSHOT;
         this.outFields = ["*"];
-        // this.showLabels= true;
-        // this.minScale=0;
-        // this.maxScale=0;
+        this.showLabels= true;
+        this.minScale=0;
+        this.maxScale=0;
         this.definitionExpression = DefinitionExpression;
     }
 
@@ -234,4 +232,5 @@ require([
         };
         editToolbar.activate(tool, graphic, options);
     }
+
 });
