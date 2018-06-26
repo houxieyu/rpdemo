@@ -1,11 +1,11 @@
 require([
-    "esri/map","esri/dijit/BasemapToggle",
-    "dojo/dom",
+    "esri/map", "esri/dijit/BasemapToggle",
+    "dojo/dom", "esri/layers/LabelClass", "esri/symbols/TextSymbol",
     "esri/dijit/Measurement",
     "esri/toolbars/draw",
     "esri/toolbars/edit",
-    "esri/graphic",
-     "esri/tasks/GeometryService",
+    "esri/graphic", "esri/Color",
+    "esri/tasks/GeometryService",
     "esri/layers/FeatureLayer",
     "esri/renderers/UniqueValueRenderer",
     "esri/symbols/PictureMarkerSymbol",
@@ -16,10 +16,11 @@ require([
     "dojo/parser",
     "dojo/domReady!"
 ], function (
-    Map,BasemapToggle,
-    dom,Measurement,
-    Draw, Edit, Graphic,GeometryService,
-    FeatureLayer,UniqueValueRenderer,PictureMarkerSymbol,
+    Map, BasemapToggle,
+    dom, LabelClass, TextSymbol,
+    Measurement,
+    Draw, Edit, Graphic, Color, GeometryService,
+    FeatureLayer, UniqueValueRenderer, PictureMarkerSymbol,
     SimpleMarkerSymbol, SimpleLineSymbol, SimpleFillSymbol, event, Query, AttributeInspector, domConstruct, Button,
     parser
 ) {
@@ -29,19 +30,20 @@ require([
     var map = new Map("map", {
         basemap: "streets",
         center: [117.05, 36.7],
-        zoom: 12
+        zoom: 12,
+        showLabels: true
     });
-        //测量工具
-        var measurement = new Measurement({
-            map: map
-          }, dom.byId("measurementDiv"));
-          measurement.startup();
+    //测量工具
+    var measurement = new Measurement({
+        map: map
+    }, dom.byId("measurementDiv"));
+    measurement.startup();
     //底图切换工具
     var toggle = new BasemapToggle({
         map: map,
         basemap: "satellite"
-      }, "BasemapToggle");
-      toggle.startup();
+    }, "BasemapToggle");
+    toggle.startup();
 
     //初始化边界、建筑物图层
     var areacode = '370102008015'
@@ -52,15 +54,40 @@ require([
     var layerCunBJ = new FeatureLayer(fsurl + "3", new layerpars("AREA_CODE like '" + areacode + "%' or AREA_CODE is null"));
     var buildfilter = "BuildCode like '" + areacode + "%' or BuildCode is null";
     var layerBuilding = new FeatureLayer(fsurl + "4", new layerpars(buildfilter));
-    var layerbuildingicon = new FeatureLayer(fsurl + "4", new layerpars(buildfilter)); 
+    //设置选中样式
+    //要素拾取
+    var symbol = new SimpleFillSymbol(
+        SimpleFillSymbol.STYLE_SOLID,
+        new SimpleLineSymbol(
+            SimpleLineSymbol.STYLE_SOLID,
+            new Color([0, 255, 255]),
+            1
+        ),
+        new Color([255, 0, 0, 0.5])
+    );
+    layerBuilding.setSelectionSymbol(symbol);
+    //设置标签
+    var statesLabel = new TextSymbol().setColor(new Color("#666"));
+    statesLabel.font.setSize("10pt");
+    statesLabel.font.setFamily("Microsoft YaHei");
+    var json = {
+        "labelExpressionInfo": {
+            "value": "{NAME}"
+        }
+    };
+    var labelClass = new LabelClass(json);
+    labelClass.symbol = statesLabel;
+    layerBuilding.setLabelingInfo([labelClass]);
+    //建筑图标渲染图层
+    var layerbuildingicon = new FeatureLayer(fsurl + "4", new layerpars(buildfilter));
     //符号渲染器
     var iconrenderer = new UniqueValueRenderer(new PictureMarkerSymbol('img/建筑.png', 20, 20), "btype");
-    iconrenderer.addValue('0',new PictureMarkerSymbol('img/住宅.png', 20, 20));
-    iconrenderer.addValue('1',new PictureMarkerSymbol('img/商业.png', 20, 20));
-    iconrenderer.addValue('2',new PictureMarkerSymbol('img/公用.png', 20, 20));
+    iconrenderer.addValue('0', new PictureMarkerSymbol('img/住宅.png', 20, 20));
+    iconrenderer.addValue('1', new PictureMarkerSymbol('img/商业.png', 20, 20));
+    iconrenderer.addValue('2', new PictureMarkerSymbol('img/公用.png', 20, 20));
     layerbuildingicon.setRenderer(iconrenderer);
     // var layerBuilding = new FeatureLayer(fsurl + "4");
-    layers = [layerShiBJ, layerXianBJ, layerXiangBJ, layerCunBJ, layerBuilding,layerbuildingicon];
+    layers = [layerShiBJ, layerXianBJ, layerXiangBJ, layerCunBJ, layerBuilding, layerbuildingicon];
     map.addLayers(layers);
     // map.addLayer(layerBuilding)
     //建筑物图层加载完成，将地图缩放至建筑物图层范围
@@ -79,33 +106,48 @@ require([
     //根据按钮属性，激活编辑工具
     $('#ui button[data-tool]').click(function () {
         curtool = $(this).attr('data-tool');
+        var selfts = layerBuilding.getSelectedFeatures();
+        var selft;
+        if (selfts.length > 0) selft = selfts[0];
+        if (curtool == 'edit')
+            activateEditTool(selft);
+        else if (curtool == 'attr') {
+            // event.stop(evt);
+            // editToolbar.deactivate();
+            // layerBuilding.clearSelection();
+            // var selectQuery = new Query();
+            // selectQuery.objectIds = [evt.graphic.attributes.OBJECTID];
+            // layerBuilding.selectFeatures(selectQuery, FeatureLayer.SELECTION_NEW, function (features) {
+            //     if (features.length > 0) {
+            //store the current feature
+            // updateFeature = features[0];
+            updateFeature = selft;
+            map.infoWindow.setTitle('属性编辑');
+            map.infoWindow.show(curpoint, map.getInfoWindowAnchor(curpoint));
+            $('.atiDeleteButton').removeClass('atiButton');
+            $('.atiDeleteButton').addClass('dijitButton');
+            // } else {
+            //     map.infoWindow.hide();
+            // }
+            // });
+        }
+        // else
         // $('#map *').css("cursor", $(this).attr('data-cursor'));
+    });
+    var showlabel = false;
+    //标注开关
+    $('#bt_label').click(function () {
+        layerBuilding.setShowLabels(showlabel=!showlabel);
     });
     //点击到建筑物时，激活编辑工具
     layerBuilding.on("click", function (evt) {
-        event.stop(evt);
-        if (curtool == 'edit')
-            activateEditTool(evt.graphic);
-        if (curtool == 'attr') {
-            event.stop(evt);
-            editToolbar.deactivate();
+        {
+            curpoint = evt.screenPoint;
             layerBuilding.clearSelection();
             var selectQuery = new Query();
             selectQuery.objectIds = [evt.graphic.attributes.OBJECTID];
-            layerBuilding.selectFeatures(selectQuery, FeatureLayer.SELECTION_NEW, function (features) {
-                if (features.length > 0) {
-                    //store the current feature
-                    updateFeature = features[0];
-                    map.infoWindow.setTitle('属性编辑');
-                    map.infoWindow.show(evt.screenPoint, map.getInfoWindowAnchor(evt.screenPoint));
-                    $('.atiDeleteButton').removeClass('atiButton');
-                    $('.atiDeleteButton').addClass('dijitButton');
-                } else {
-                    map.infoWindow.hide();
-                }
-            });
+            layerBuilding.selectFeatures(selectQuery, FeatureLayer.SELECTION_NEW, function (features) {});
         }
-
     });
     //属性编辑工具
     var layerInfos = [{
@@ -172,7 +214,7 @@ require([
 
     attInspector.on("next", function (evt) {
         updateFeature = evt.feature;
-        console.log("Next " + updateFeature.attributes.OBJECTID);
+        // console.log("Next " + updateFeature.attributes.OBJECTID);
     });
 
     attInspector.on("delete", function (evt) {
@@ -189,9 +231,10 @@ require([
         require([
             "esri/graphicsUtils", "dojo/domReady!"
         ], function (graphicsUtils) {
-            if(layerBuilding.graphics.length>0){
-            var myFeatureExtent = graphicsUtils.graphicsExtent(layerBuilding.graphics);
-            map.setExtent(myFeatureExtent);}
+            if (layerBuilding.graphics.length > 0) {
+                var myFeatureExtent = graphicsUtils.graphicsExtent(layerBuilding.graphics);
+                map.setExtent(myFeatureExtent);
+            }
         });
     }
 
@@ -199,9 +242,9 @@ require([
     function layerpars(DefinitionExpression) {
         this.mode = FeatureLayer.MODE_SNAPSHOT;
         this.outFields = ["*"];
-        this.showLabels= true;
-        this.minScale=0;
-        this.maxScale=0;
+        this.showLabels = false;
+        this.minScale = 0;
+        this.maxScale = 0;
         this.definitionExpression = DefinitionExpression;
     }
 
@@ -246,14 +289,17 @@ require([
         // map.graphics.add(graphic);
 
         //var newAttributes = lang.mixin({}, selectedTemplate.template.prototype.attributes);
-        var newGraphic = new Graphic(evt.geometry, null, {BuildCode:areacode,btype:0});
-        layerBuilding.applyEdits([newGraphic], null, null,function(){
+        var newGraphic = new Graphic(evt.geometry, null, {
+            BuildCode: areacode,
+            btype: 0
+        });
+        layerBuilding.applyEdits([newGraphic], null, null, function () {
             layerbuildingicon.refresh();
         });
 
         // newGraphic = new Graphic(evt.geometry, null, {BuildCode:areacode,btype:0});
         // layerbuildingicon.applyEdits([newGraphic], null, null);
-        
+
     }
     //激活编辑工具
     function activateEditTool(graphic) {
