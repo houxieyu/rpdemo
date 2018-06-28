@@ -103,6 +103,12 @@
                     </div>
                 </div>
                 <div class="layui-inline">
+                        <label class="layui-form-label">房屋号</label>
+                        <div class="layui-input-inline">
+                            <input type="text" name="fangwuhao" autocomplete="off" class="layui-input">
+                        </div>
+                    </div>
+                <div class="layui-inline">
                     <label class="layui-form-label">H1.户编号</label>
                     <div class="layui-input-inline">
                         <input type="text" name="H1" autocomplete="off" class="layui-input">
@@ -162,12 +168,12 @@
 
         </div>
         <div id='huinfo' style="display: none">
-                <div class="layui-inline">
-                        <label >建筑物ID</label>
-                        <label  id="labeldbcode"></label>
+                <div class="layui-inline" style="padding-left: 10px;">
+                        建筑物ID:
+                        <span  id="labeldbcode"></span>
                     </div>
             <button id="addhu" class="layui-btn layui-btn-sm">
-                <i class="layui-icon">&#xe654;</i>
+                <i class="layui-icon">&#xe654;</i>添加住户
             </button>
             <table id="tablehu" lay-filter="tablehu"></table>
         </div>

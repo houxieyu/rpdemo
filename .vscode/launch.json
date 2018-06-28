@@ -8,7 +8,7 @@
             "type": "java",
             "name": "Debug (Launch)-DemoConfig<jfinal_demo_for_maven>",
             "request": "launch",
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/server",
             "console": "internalConsole",
             "stopOnEntry": false,
             "mainClass": "com.demo.common.DemoConfig",

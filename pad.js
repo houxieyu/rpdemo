@@ -2,7 +2,7 @@ require([
     "esri/map", "esri/dijit/BasemapToggle",
     "dojo/dom", "esri/layers/LabelClass", "esri/symbols/TextSymbol",
     "esri/dijit/Measurement", "esri/dijit/InfoWindow",
-    "esri/toolbars/draw",
+    "esri/toolbars/draw","esri/symbols/Font",
     "esri/toolbars/edit",
     "esri/graphic", "esri/Color",
     "esri/tasks/GeometryService",
@@ -18,8 +18,8 @@ require([
 ], function (
     Map, BasemapToggle,
     dom, LabelClass, TextSymbol,
-    Measurement, InfoWindow,
-    Draw, Edit, Graphic, Color, GeometryService,
+    Measurement, InfoWindow,Draw,Font,
+    Edit, Graphic, Color, GeometryService,
     FeatureLayer, UniqueValueRenderer, PictureMarkerSymbol,
     SimpleMarkerSymbol, SimpleLineSymbol, SimpleFillSymbol, event, Query, AttributeInspector, domConstruct, Button,
     parser
@@ -49,7 +49,7 @@ require([
     toggle.startup();
 
     //初始化边界、建筑物图层
-    var areacode = '370102008015'
+    var areacode = '370102008015';
     var layerShiBJ = new FeatureLayer(fsurl + "0", new layerpars('1=2'));
     var layerXianBJ = new FeatureLayer(fsurl + "1", new layerpars('1=2'));
     var layerXiangBJ = new FeatureLayer(fsurl + "2", new layerpars('1=2'));
@@ -90,13 +90,45 @@ require([
     iconrenderer.addValue('1', new PictureMarkerSymbol('img/商业.png', 20, 20));
     iconrenderer.addValue('2', new PictureMarkerSymbol('img/公用.png', 20, 20));
     layerbuildingicon.setRenderer(iconrenderer);
+    //标注渲染图层
+    var layerbuildinglabel = new FeatureLayer(fsurl + "4", new layerpars(buildfilter));
+    function renderLabelLayer(showlabel){
+        if(!showlabel){
+            layerbuildinglabel.hide();
+            return;
+        }else{
+            layerbuildinglabel.show();
+        }
+        //标注渲染器
+        var labelrenderer = new UniqueValueRenderer(new TextSymbol(''), "OBJECTID");
+        //查询图层属性
+        // var queryTask = new QueryTask(fsurl+"4");
+        // var query = new Query();
+        // query.outFields = ["*"];
+        // query.where = buildfilter;
+        // queryTask.execute(query,function(fts){
+        // });
+        layerBuilding.graphics.forEach(ft => {
+            // console.log(ft)
+            labelrenderer.addValue({
+                value:ft.attributes.OBJECTID,
+                label:ft.attributes.rzhushu,
+                symbol:new TextSymbol((ft.attributes.NAME?(ft.attributes.NAME + ":"):"")+"入住户数"+(ft.attributes.rzhushu?ft.attributes.rzhushu:"0")).setColor(new Color("red")).setFont(new Font("12px"))
+            });
+        });
+        layerbuildinglabel.setRenderer(labelrenderer);
+        layerbuildinglabel.setShowLabels(true);
+        layerbuildinglabel.show();
+    }
+
     // var layerBuilding = new FeatureLayer(fsurl + "4");
-    layers = [layerShiBJ, layerXianBJ, layerXiangBJ, layerCunBJ, layerBuilding, layerbuildingicon];
+    layers = [layerShiBJ, layerXianBJ, layerXiangBJ, layerCunBJ, layerBuilding, layerbuildingicon,layerbuildinglabel];
     map.addLayers(layers);
     // map.addLayer(layerBuilding)
     //建筑物图层加载完成，将地图缩放至建筑物图层范围
     layerBuilding.on('update-end', function () {
         FullExtent();
+
     });
     //生成绘图工具
     map.on("load", createToolbar);
@@ -139,7 +171,8 @@ require([
     var showlabel = false;
     //标注开关
     $('#bt_label').click(function () {
-        layerBuilding.setShowLabels(showlabel = !showlabel);
+        // layerBuilding.setShowLabels(showlabel = !showlabel);
+        renderLabelLayer(showlabel = !showlabel);
     });
     //点击到建筑物时，激活编辑工具
     layerBuilding.on("click", function (evt) {
@@ -249,7 +282,7 @@ require([
     //渲染住户列表
     function loadZhuhuTable() {
         //从服务器读取数据
-        $.ajax("http://localhost:800/zhuhu/", {
+        $.ajax(serveraddr+"zhuhu/", {
             type: "POST",
             dataType: 'json',
             data: {
@@ -263,6 +296,8 @@ require([
                     done: function (res, curr, count) {},
                     cols: [
                         [
+                            {field:'fangwuhao',
+                        title:'房号'},
                             {
                                 field: 'H1',
                                 title: '户编码'
@@ -301,7 +336,7 @@ require([
                     //几个参数需要注意一下
                     type: "GET", //方法类型
                     dataType: "json", //预期服务器返回的数据类型
-                    url: "http://localhost:800/zhuhu/edit/" + obj.data.id, //url
+                    url: serveraddr+"zhuhu/edit/" + obj.data.id, //url
                     success: function (result) {
                         openZhuhuDialog(result,updateZhuhu);
                     },
@@ -319,19 +354,9 @@ require([
     });
     //新增住户
     $('#addhu').click(function () {
-        /*从服务器读取数据
-        $.ajax("http://localhost:800/zhuhu/add?buildcode=370102", {
-            type: "POST",
-            dataType:"json",
-            success: function (ret) {
-                // console.log(ret)
-                $('#huedit').html(JSON.stringify(ret));
-        layer.open({
-            type: 2, 
-            content: 'zhuhu.htm' //这里content是一个URL，如果你不想让iframe出现滚动条，你还可以content: ['http://sentsin.com', 'no']
-          });  */
         layui.use(['layer', 'table'], function () {
             openZhuhuDialog({
+                "fangwuhao":'',
                 "H1": '001',
                 "H2": 2,
                 "H3_1": 1,
@@ -375,50 +400,36 @@ require([
             }
         });
     }
+    //提交住户数据
+    function commitZhuhu(method,msg){
+       //处理表单字段
+       var formdata = $('#huform').serialize();
+       // formdata += '&id='+$('#bdcode').val()+$('input[name="H1"]').val();
+       $.ajax({
+           //几个参数需要注意一下
+           type: "POST", //方法类型
+           dataType: "json", //预期服务器返回的数据类型
+           url: serveraddr+method, //url
+           data: formdata,
+           success: function (result) {
+               // console.log(result);//打印服务端返回的数据(调试用)
+               layui.layer.msg(msg);
+               loadZhuhuTable();
+           },
+           error: function (p1, p2) {
+               // console.log(p1);
+               layui.layer.msg(p1.responseText);
+           }
+       });
+       layui.layer.close(layui.layer.index);
+    }
     //保存新增住户数据
     function addZhuhu() {
-        //处理表单字段
-        var formdata = $('#huform').serialize();
-        // formdata += '&id='+$('#bdcode').val()+$('input[name="H1"]').val();
-        $.ajax({
-            //几个参数需要注意一下
-            type: "POST", //方法类型
-            dataType: "json", //预期服务器返回的数据类型
-            url: "http://localhost:800/zhuhu/save", //url
-            data: formdata,
-            success: function (result) {
-                // console.log(result);//打印服务端返回的数据(调试用)
-                alert('添加成功');
-                loadZhuhuTable();
-            },
-            error: function (p1, p2) {
-                // console.log(p1);
-                layui.layer.msg(p1.responseText);
-            }
-        });
-        layui.layer.close(layui.layer.index);
+        commitZhuhu("zhuhu/save",'添加成功');
     }
     //更新住户数据
     function updateZhuhu(){
-               //处理表单字段
-               var formdata = $('#huform').serialize();
-               $.ajax({
-                   //几个参数需要注意一下
-                   type: "POST", //方法类型
-                   dataType: "json", //预期服务器返回的数据类型
-                   url: "http://localhost:800/zhuhu/update", //url
-                   data: formdata,
-                   success: function (result) {
-                       // console.log(result);//打印服务端返回的数据(调试用)
-                       alert('更新成功');
-                       loadZhuhuTable();
-                   },
-                   error: function (p1, p2) {
-                       // console.log(p1);
-                       layui.layer.msg(p1.responseText);
-                   }
-               });
-               layui.layer.close(layui.layer.index);
+        commitZhuhu("zhuhu/update",'更新成功');
     }
     //修改属性
     attInspector.on("attribute-change", function (evt) {
