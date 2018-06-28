@@ -1,7 +1,7 @@
 require([
     "esri/map", "esri/dijit/BasemapToggle",
     "dojo/dom", "esri/layers/LabelClass", "esri/symbols/TextSymbol",
-    "esri/dijit/Measurement",
+    "esri/dijit/Measurement", "esri/dijit/InfoWindow",
     "esri/toolbars/draw",
     "esri/toolbars/edit",
     "esri/graphic", "esri/Color",
@@ -18,7 +18,7 @@ require([
 ], function (
     Map, BasemapToggle,
     dom, LabelClass, TextSymbol,
-    Measurement,
+    Measurement, InfoWindow,
     Draw, Edit, Graphic, Color, GeometryService,
     FeatureLayer, UniqueValueRenderer, PictureMarkerSymbol,
     SimpleMarkerSymbol, SimpleLineSymbol, SimpleFillSymbol, event, Query, AttributeInspector, domConstruct, Button,
@@ -26,11 +26,14 @@ require([
 ) {
     parser.parse();
     esriConfig.defaults.geometryService = new GeometryService("https://utility.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer");
+    // var infoWindow = new InfoWindow({}, domConstruct.create("div"));
+    // infoWindow.startup();
     //初始化底图
     var map = new Map("map", {
         basemap: "streets",
+        // infoWindow: infoWindow,
         center: [117.05, 36.7],
-        zoom: 12,
+        zoom: 15,
         showLabels: true
     });
     //测量工具
@@ -52,6 +55,7 @@ require([
     var layerXiangBJ = new FeatureLayer(fsurl + "2", new layerpars('1=2'));
     //依据区划码，过滤村级边界和建筑物图层
     var layerCunBJ = new FeatureLayer(fsurl + "3", new layerpars("AREA_CODE like '" + areacode + "%' or AREA_CODE is null"));
+    layerCunBJ.setShowLabels(true);
     var buildfilter = "BuildCode like '" + areacode + "%' or BuildCode is null";
     var layerBuilding = new FeatureLayer(fsurl + "4", new layerpars(buildfilter));
     //设置选中样式
@@ -104,11 +108,9 @@ require([
         // $('#map *').css("cursor", "default");
     });
     //根据按钮属性，激活编辑工具
+    var selft;
     $('#ui button[data-tool]').click(function () {
         curtool = $(this).attr('data-tool');
-        var selfts = layerBuilding.getSelectedFeatures();
-        var selft;
-        if (selfts.length > 0) selft = selfts[0];
         if (curtool == 'edit')
             activateEditTool(selft);
         else if (curtool == 'attr') {
@@ -137,16 +139,19 @@ require([
     var showlabel = false;
     //标注开关
     $('#bt_label').click(function () {
-        layerBuilding.setShowLabels(showlabel=!showlabel);
+        layerBuilding.setShowLabels(showlabel = !showlabel);
     });
     //点击到建筑物时，激活编辑工具
     layerBuilding.on("click", function (evt) {
         {
+            haslayerclick = true;
             curpoint = evt.screenPoint;
             layerBuilding.clearSelection();
             var selectQuery = new Query();
             selectQuery.objectIds = [evt.graphic.attributes.OBJECTID];
             layerBuilding.selectFeatures(selectQuery, FeatureLayer.SELECTION_NEW, function (features) {});
+            var selfts = layerBuilding.getSelectedFeatures();
+            if (selfts.length > 0) selft = selfts[0];
         }
     });
     //属性编辑工具
@@ -157,7 +162,7 @@ require([
         'fieldInfos': [{
                 'fieldName': 'BuildCode',
                 'isEditable': true,
-                'label': '建筑物编码:'
+                'label': '建筑编码:'
             },
             {
                 'fieldName': 'ADDRESS',
@@ -172,7 +177,7 @@ require([
             {
                 'fieldName': 'btype',
                 'isEditable': true,
-                'label': '建筑物类型:'
+                'label': '建筑类型:'
             },
             {
                 'fieldName': 'LAYERNUM',
@@ -182,7 +187,12 @@ require([
             {
                 'fieldName': 'UnitCount',
                 'isEditable': true,
-                'label': '户数:'
+                'label': '房屋套数:'
+            },
+            {
+                'fieldName': 'rzhushu',
+                'isEditable': true,
+                'label': '入住户数:'
             }
         ]
     }];
@@ -206,7 +216,211 @@ require([
         map.infoWindow.hide();
         layerbuildingicon.redraw();
     });
+    //添加采集住户信息按钮
+    // var huButton = new Button({
+    //     label: "采集住户信息"
+    // }, domConstruct.create("button", {
+    //     style: {
+    //         color: "red"
+    //     }
+    // }));
+    // domConstruct.place(huButton.domNode, saveButton.domNode, "after");
+    // console.log(attInspector.editButtons)
+    $('#bt_caiji').click(function () {
+        layui.use(['layer', 'table'], function () {
+            var layer = layui.layer;
+            layer.open({
+                type: 1,
+                area: '500px',
+                shade: 0,
+                offset: 'auto',
+                title: '住户列表',
+                content: $('#huinfo') //这里content是一个DOM，注意：最好该元素要存放在body最外层，否则可能被其它的相对元素所影响
+            });
+            try {
+                $('#labeldbcode').text(selft.attributes.BuildCode);
+            } catch (e) {
+                console.log(e.message)
+            }
+            //渲染住户列表
+            loadZhuhuTable();
+        });
+    });
+    //渲染住户列表
+    function loadZhuhuTable() {
+        //从服务器读取数据
+        $.ajax("http://localhost:800/zhuhu/", {
+            type: "POST",
+            dataType: 'json',
+            data: {
+                bdcode: selft.attributes.BuildCode
+            },
+            success: function (ret) {
+                layui.table.render({
+                    elem: '#tablehu',
+                    data: ret,
+                    page: true, //开启分页
+                    done: function (res, curr, count) {},
+                    cols: [
+                        [
+                            {
+                                field: 'H1',
+                                title: '户编码'
+                            }, {
+                                field: 'H2',
+                                title: '户类别'
+                            }, {
+                                field: 'H3_1',
+                                title: '应登记人数'
+                            }, {
+                                fixed: 'right',
+                                width: 150,
+                                align: 'center',
+                                toolbar: '#zhuhubar'
+                            } //这里的toolbar值是模板元素的选择器
+                        ]
+                    ]
+                });
+            }
+        });
+    }
+    //住户列表编辑删除按钮
+    layui.use(['table'], function () {
+        layui.table.on('tool(tablehu)', function (obj) { //注：tool是工具条事件名，test是table原始容器的属性 lay-filter="对应的值"
+            if (obj.event === 'detail') { //查看
+                //do somehing
+            } else if (obj.event === 'del') { //删除
+                layer.confirm('真的删除行么', function (index) {
+                    obj.del(); //删除对应行（tr）的DOM结构，并更新缓存
+                    layer.close(index);
+                    //向服务端发送删除指令
+                });
+            } else if (obj.event === 'edit') { //编辑
+                //do something
+                $.ajax({
+                    //几个参数需要注意一下
+                    type: "GET", //方法类型
+                    dataType: "json", //预期服务器返回的数据类型
+                    url: "http://localhost:800/zhuhu/edit/" + obj.data.id, //url
+                    success: function (result) {
+                        openZhuhuDialog(result,updateZhuhu);
+                    },
+                    error: function (p1, p2) {
+                        layui.layer.msg(p1.responseText);
+                    }
+                });
+                //同步更新缓存对应的值
+                //   obj.update({
+                //     username: '123'
+                //     ,title: 'xxx'
+                //   });
+            }
+        });
+    });
+    //新增住户
+    $('#addhu').click(function () {
+        /*从服务器读取数据
+        $.ajax("http://localhost:800/zhuhu/add?buildcode=370102", {
+            type: "POST",
+            dataType:"json",
+            success: function (ret) {
+                // console.log(ret)
+                $('#huedit').html(JSON.stringify(ret));
+        layer.open({
+            type: 2, 
+            content: 'zhuhu.htm' //这里content是一个URL，如果你不想让iframe出现滚动条，你还可以content: ['http://sentsin.com', 'no']
+          });  */
+        layui.use(['layer', 'table'], function () {
+            openZhuhuDialog({
+                "H1": '001',
+                "H2": 2,
+                "H3_1": 1,
+                "H4_1": 0,
+                "H4_2": 0,
+                "H4_3": 0,
+                "H4_4": 0,
+                "H5": 1,
+                "H6": 1,
+                "bdcode": selft.attributes.BuildCode
+            }, addZhuhu);
+            // $.get('zhuhu.htm', {}, function (str) {
+            // layui.layer.full(idx);
+            // });
+        });
+    });
 
+    //住户编辑对话框
+    function openZhuhuDialog(initdata, yesfunc) {
+        var idx = layui.layer.open({
+            type: 1,
+            shade: 0,
+            title: '住户信息',
+            area: '450px',
+            offset: 'auto',
+            content: $('#huedit'),
+            success: function () {
+                layui.use('form', function () {
+                    var form = layui.form;
+                    try {
+                        form.val("huform", initdata);
+                    } catch (e) {
+                        console.log(e.message)
+                    }
+                    form.render();
+                });
+            },
+            btn: ['保存', '关闭'],
+            yes: yesfunc,
+            btn2: function () { //关闭按钮
+            }
+        });
+    }
+    //保存新增住户数据
+    function addZhuhu() {
+        //处理表单字段
+        var formdata = $('#huform').serialize();
+        // formdata += '&id='+$('#bdcode').val()+$('input[name="H1"]').val();
+        $.ajax({
+            //几个参数需要注意一下
+            type: "POST", //方法类型
+            dataType: "json", //预期服务器返回的数据类型
+            url: "http://localhost:800/zhuhu/save", //url
+            data: formdata,
+            success: function (result) {
+                // console.log(result);//打印服务端返回的数据(调试用)
+                alert('添加成功');
+                loadZhuhuTable();
+            },
+            error: function (p1, p2) {
+                // console.log(p1);
+                layui.layer.msg(p1.responseText);
+            }
+        });
+        layui.layer.close(layui.layer.index);
+    }
+    //更新住户数据
+    function updateZhuhu(){
+               //处理表单字段
+               var formdata = $('#huform').serialize();
+               $.ajax({
+                   //几个参数需要注意一下
+                   type: "POST", //方法类型
+                   dataType: "json", //预期服务器返回的数据类型
+                   url: "http://localhost:800/zhuhu/update", //url
+                   data: formdata,
+                   success: function (result) {
+                       // console.log(result);//打印服务端返回的数据(调试用)
+                       alert('更新成功');
+                       loadZhuhuTable();
+                   },
+                   error: function (p1, p2) {
+                       // console.log(p1);
+                       layui.layer.msg(p1.responseText);
+                   }
+               });
+               layui.layer.close(layui.layer.index);
+    }
+    //修改属性
     attInspector.on("attribute-change", function (evt) {
         //store the updates to apply when the save button is clicked
         updateFeature.attributes[evt.fieldName] = evt.fieldValue;
@@ -253,7 +467,7 @@ require([
         toolbar.activate(Draw[tooltype]);
         map.hideZoomSlider();
     }
-
+    var haslayerclick = false;
     //生成绘图工具
     function createToolbar(themap) {
         toolbar = new Draw(map);
@@ -262,6 +476,13 @@ require([
         //点击到底图时，取消编辑工具
         map.on("click", function (evt) {
             editToolbar.deactivate();
+            if (!haslayerclick) {
+                layerBuilding.clearSelection();
+            }
+            layui.use(['layer'], function () {
+                layui.layer.closeAll();
+            });
+            haslayerclick = false;
         });
 
         editToolbar.on("deactivate", function (evt) {
