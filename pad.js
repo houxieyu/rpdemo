@@ -2,7 +2,7 @@ require([
     "esri/map", "esri/dijit/BasemapToggle",
     "dojo/dom", "esri/layers/LabelClass", "esri/symbols/TextSymbol",
     "esri/dijit/Measurement", "esri/dijit/InfoWindow",
-    "esri/toolbars/draw","esri/symbols/Font",
+    "esri/toolbars/draw", "esri/symbols/Font",
     "esri/toolbars/edit",
     "esri/graphic", "esri/Color",
     "esri/tasks/GeometryService",
@@ -18,7 +18,7 @@ require([
 ], function (
     Map, BasemapToggle,
     dom, LabelClass, TextSymbol,
-    Measurement, InfoWindow,Draw,Font,
+    Measurement, InfoWindow, Draw, Font,
     Edit, Graphic, Color, GeometryService,
     FeatureLayer, UniqueValueRenderer, PictureMarkerSymbol,
     SimpleMarkerSymbol, SimpleLineSymbol, SimpleFillSymbol, event, Query, AttributeInspector, domConstruct, Button,
@@ -76,14 +76,16 @@ require([
     statesLabel.font.setFamily("Microsoft YaHei");
     var json = {
         "labelExpressionInfo": {
+            // "value": "{NAME} 住户：{rzhushu}"
             "value": "{NAME}"
         }
     };
     var labelClass = new LabelClass(json);
     labelClass.symbol = statesLabel;
     layerBuilding.setLabelingInfo([labelClass]);
+    var layerinitpars = new layerpars(buildfilter);
     //建筑图标渲染图层
-    var layerbuildingicon = new FeatureLayer(fsurl + "4", new layerpars(buildfilter));
+    var layerbuildingicon = new FeatureLayer(fsurl + "4", layerinitpars);
     //符号渲染器
     var iconrenderer = new UniqueValueRenderer(new PictureMarkerSymbol('img/建筑.png', 20, 20), "btype");
     iconrenderer.addValue('0', new PictureMarkerSymbol('img/住宅.png', 20, 20));
@@ -91,12 +93,14 @@ require([
     iconrenderer.addValue('2', new PictureMarkerSymbol('img/公用.png', 20, 20));
     layerbuildingicon.setRenderer(iconrenderer);
     //标注渲染图层
-    var layerbuildinglabel = new FeatureLayer(fsurl + "4", new layerpars(buildfilter));
-    function renderLabelLayer(showlabel){
-        if(!showlabel){
+    layerinitpars.visible = false;
+    var layerbuildinglabel = new FeatureLayer(fsurl + "4", layerinitpars);
+
+    function renderLabelLayer(showlabel) {
+        if (!showlabel) {
             layerbuildinglabel.hide();
             return;
-        }else{
+        } else {
             layerbuildinglabel.show();
         }
         //标注渲染器
@@ -111,24 +115,25 @@ require([
         layerBuilding.graphics.forEach(ft => {
             // console.log(ft)
             labelrenderer.addValue({
-                value:ft.attributes.OBJECTID,
-                label:ft.attributes.rzhushu,
-                symbol:new TextSymbol((ft.attributes.NAME?(ft.attributes.NAME + ":"):"")+"入住户数"+(ft.attributes.rzhushu?ft.attributes.rzhushu:"0")).setColor(new Color("red")).setFont(new Font("12px"))
+                value: ft.attributes.OBJECTID,
+                label: ft.attributes.rzhushu,
+                symbol: new TextSymbol((ft.attributes.NAME ? (ft.attributes.NAME) : "") + (ft.attributes.rzhushu ? "\r\n入住户数：" + ft.attributes.rzhushu : "")).setColor(new Color("gray")).setFont(new Font("12px", Font.STYLE_NORMAL,
+                    Font.VARIANT_NORMAL, Font.WEIGHT_NORMAL, "Microsoft Yahei"))
             });
         });
         layerbuildinglabel.setRenderer(labelrenderer);
-        layerbuildinglabel.setShowLabels(true);
+        // layerbuildinglabel.setShowLabels(true);
         layerbuildinglabel.show();
+        layerbuildinglabel.redraw();
     }
 
     // var layerBuilding = new FeatureLayer(fsurl + "4");
-    layers = [layerShiBJ, layerXianBJ, layerXiangBJ, layerCunBJ, layerBuilding, layerbuildingicon,layerbuildinglabel];
+    layers = [layerShiBJ, layerXianBJ, layerXiangBJ, layerCunBJ, layerBuilding, layerbuildingicon, layerbuildinglabel];
     map.addLayers(layers);
     // map.addLayer(layerBuilding)
     //建筑物图层加载完成，将地图缩放至建筑物图层范围
     layerBuilding.on('update-end', function () {
         FullExtent();
-
     });
     //生成绘图工具
     map.on("load", createToolbar);
@@ -143,7 +148,7 @@ require([
     var selft;
     $('#ui button[data-tool]').click(function () {
         curtool = $(this).attr('data-tool');
-        if (curtool == 'edit')
+        if (curtool == 'edit' || curtool=='scale')
             activateEditTool(selft);
         else if (curtool == 'attr') {
             // event.stop(evt);
@@ -171,8 +176,8 @@ require([
     var showlabel = false;
     //标注开关
     $('#bt_label').click(function () {
-        // layerBuilding.setShowLabels(showlabel = !showlabel);
-        renderLabelLayer(showlabel = !showlabel);
+        layerBuilding.setShowLabels(showlabel = !showlabel);
+        // renderLabelLayer(showlabel = !showlabel);
     });
     //点击到建筑物时，激活编辑工具
     layerBuilding.on("click", function (evt) {
@@ -259,73 +264,113 @@ require([
     // }));
     // domConstruct.place(huButton.domNode, saveButton.domNode, "after");
     // console.log(attInspector.editButtons)
+    //打开住户列表
     $('#bt_caiji').click(function () {
+        if(selft){
         layui.use(['layer', 'table'], function () {
             var layer = layui.layer;
             layer.open({
                 type: 1,
                 area: '500px',
                 shade: 0,
-                offset: 'auto',
+                offset: 't',
                 title: '住户列表',
-                content: $('#huinfo') //这里content是一个DOM，注意：最好该元素要存放在body最外层，否则可能被其它的相对元素所影响
+                content: $('#zhuhulist') //这里content是一个DOM，注意：最好该元素要存放在body最外层，否则可能被其它的相对元素所影响
             });
             try {
                 $('#labeldbcode').text(selft.attributes.BuildCode);
+                $('#labeldbname').text(selft.attributes.NAME);
+                $('#labeldbrzhs').text(selft.attributes.rzhushu);
             } catch (e) {
                 console.log(e.message)
             }
             //渲染住户列表
             loadZhuhuTable();
         });
+    }
+    else{
+        layui.layer.msg('请选中一个建筑物');
+    }
     });
-    //渲染住户列表
-    function loadZhuhuTable() {
-        //从服务器读取数据
-        $.ajax(serveraddr+"zhuhu/", {
+    //渲染表格
+    function loadTable(method, param, tableid, cols) {
+        $.ajax(serveraddr + method, {
             type: "POST",
             dataType: 'json',
-            data: {
-                bdcode: selft.attributes.BuildCode
-            },
+            data: param,
             success: function (ret) {
                 layui.table.render({
-                    elem: '#tablehu',
+                    elem: tableid,
                     data: ret,
                     page: true, //开启分页
                     done: function (res, curr, count) {},
-                    cols: [
-                        [
-                            {field:'fangwuhao',
-                        title:'房号'},
-                            {
-                                field: 'H1',
-                                title: '户编码'
-                            }, {
-                                field: 'H2',
-                                title: '户类别'
-                            }, {
-                                field: 'H3_1',
-                                title: '应登记人数'
-                            }, {
-                                fixed: 'right',
-                                width: 150,
-                                align: 'center',
-                                toolbar: '#zhuhubar'
-                            } //这里的toolbar值是模板元素的选择器
-                        ]
-                    ]
+                    cols: cols
                 });
             }
         });
     }
-    //住户列表编辑删除按钮
+    //渲染人员列表
+    function loadRenyuanTable() {
+        var cols = [
+            [{
+                    field: 'R1',
+                    title: '姓名'
+                },
+                {
+                    field: 'R2',
+                    title: '关系'
+                }, {
+                    field: 'R3',
+                    title: '性别'
+                }, {
+                    fixed: 'right',
+                    width: 150,
+                    align: 'center',
+                    toolbar: '#renyuanbar'
+                }  //这里的toolbar值是模板元素的选择器
+            ]
+        ];
+        loadTable("renyuan/", {
+            zhuhuid: $('#labelzhuhuid').text()
+        }, '#tablerenyuan', cols);
+    }
+    //渲染住户列表
+    function loadZhuhuTable() {
+        var cols = [
+            [{
+                    field: 'fangwuhao',
+                    title: '房号'
+                },
+                {
+                    field: 'H1',
+                    title: '户编码'
+                }, {
+                    field: 'H2',
+                    title: '户类别'
+                }, {
+                    field: 'H3_1',
+                    title: '应登记人数'
+                }, {
+                    fixed: 'right',
+                    width: 150,
+                    align: 'center',
+                    toolbar: '#zhuhubar'
+                } //这里的toolbar值是模板元素的选择器
+            ]
+        ];
+        if (selft) {
+            loadTable("zhuhu/", {
+                bdcode: selft.attributes.BuildCode
+            }, '#tablehu', cols);
+        }
+    }
+    //住户列表编辑删除工具列按钮
     layui.use(['table'], function () {
         layui.table.on('tool(tablehu)', function (obj) { //注：tool是工具条事件名，test是table原始容器的属性 lay-filter="对应的值"
             if (obj.event === 'detail') { //查看
                 //do somehing
             } else if (obj.event === 'del') { //删除
-                layer.confirm('真的删除行么', function (index) {
+                layer.confirm('真的删除么？', function (index) {
                     obj.del(); //删除对应行（tr）的DOM结构，并更新缓存
                     layer.close(index);
                     //向服务端发送删除指令
@@ -336,9 +381,9 @@ require([
                     //几个参数需要注意一下
                     type: "GET", //方法类型
                     dataType: "json", //预期服务器返回的数据类型
-                    url: serveraddr+"zhuhu/edit/" + obj.data.id, //url
+                    url: serveraddr + "zhuhu/edit/" + obj.data.id, //url
                     success: function (result) {
-                        openZhuhuDialog(result,updateZhuhu);
+                        openZhuhuDialog(result, updateZhuhu);
                     },
                     error: function (p1, p2) {
                         layui.layer.msg(p1.responseText);
@@ -351,21 +396,52 @@ require([
                 //   });
             }
         });
+        layui.table.on('tool(tablerenyuan)', function (obj) { //注：tool是工具条事件名，test是table原始容器的属性 lay-filter="对应的值"
+        if (obj.event === 'detail') { //查看
+            //do somehing
+        } else if (obj.event === 'del') { //删除
+            layer.confirm('真的删除么？', function (index) {
+                obj.del(); //删除对应行（tr）的DOM结构，并更新缓存
+                layer.close(index);
+                //向服务端发送删除指令
+            });
+        } else if (obj.event === 'edit') { //编辑
+            //do something
+            $.ajax({
+                //几个参数需要注意一下
+                type: "GET", //方法类型
+                dataType: "json", //预期服务器返回的数据类型
+                url: serveraddr + "renyuan/edit/" + obj.data.id, //url
+                success: function (result) {
+                    openRenyuanDialog(result, updateRenyuan);
+                },
+                error: function (p1, p2) {
+                    layui.layer.msg(p1.responseText);
+                }
+            });
+            //同步更新缓存对应的值
+            //   obj.update({
+            //     username: '123'
+            //     ,title: 'xxx'
+            //   });
+        }
+    });
     });
     //新增住户
     $('#addhu').click(function () {
         layui.use(['layer', 'table'], function () {
             openZhuhuDialog({
-                "fangwuhao":'',
+                "fangwuhao": '',
                 "H1": '001',
-                "H2": 2,
-                "H3_1": 1,
+                "H2": 1,
+                "H3_1": 0,
+                "H3_2": 0,
                 "H4_1": 0,
                 "H4_2": 0,
                 "H4_3": 0,
                 "H4_4": 0,
-                "H5": 1,
-                "H6": 1,
+                "H5": 0,
+                "H6": 0,
                 "bdcode": selft.attributes.BuildCode
             }, addZhuhu);
             // $.get('zhuhu.htm', {}, function (str) {
@@ -373,14 +449,64 @@ require([
             // });
         });
     });
-
+    //新增人员
+    $('#addrenyuan').click(function () {
+        layui.use(['layer', 'table'], function () {
+            openRenyuanDialog({
+                "R0": '01',
+                "R1": '',
+                "R2": 0,
+                "R3": 1,
+                "R4": '',
+                "R5": '汉族',
+                "R6": 1,
+                "R7": 1,
+                "R8": 1,
+                "R9": 1,
+                "R10": 1,
+                "R11": 1,
+                "R12": 1,
+                "huid": $('#labelzhuhuid').text(),
+                "sfzh":''
+            }, addRenyuan);
+            // $.get('zhuhu.htm', {}, function (str) {
+            // layui.layer.full(idx);
+            // });
+        });
+    });
+    //人员编辑对话框
+    function openRenyuanDialog(initdata, yesfunc) {
+        var idx = layui.layer.open({
+            type: 1,
+            shade: 0,
+            title: '人员信息',
+            area: '650px',
+            offset: 'auto',
+            content: $('#renyuanedit'),
+            success: function () {
+                layui.use('form', function () {
+                    var form = layui.form;
+                    try {
+                        form.val("renyuanform", initdata);
+                    } catch (e) {
+                        console.log(e.message)
+                    }
+                    form.render();
+                });
+            },
+            btn: ['保存', '关闭'],
+            yes: yesfunc,
+            btn2: function () { //关闭按钮
+            }
+        });
+    }
     //住户编辑对话框
     function openZhuhuDialog(initdata, yesfunc) {
         var idx = layui.layer.open({
             type: 1,
             shade: 0,
             title: '住户信息',
-            area: '450px',
+            area: '520px',
             offset: 'auto',
             content: $('#huedit'),
             success: function () {
@@ -394,42 +520,78 @@ require([
                     form.render();
                 });
             },
-            btn: ['保存', '关闭'],
+            btn: ['保存', '关闭', '人员信息'],
             yes: yesfunc,
             btn2: function () { //关闭按钮
+            },
+            btn3: function () {
+                layui.use(['layer', 'table'], function () {
+                    var layer = layui.layer;
+                    layer.open({
+                        type: 1,
+                        area: '500px',
+                        shade: 0,
+                        title: '人员列表',
+                        content: $('#renyuanlist') //这里content是一个DOM，注意：最好该元素要存放在body最外层，否则可能被其它的相对元素所影响
+                    });
+                    try {
+                        $('#labelzhuhuid').text(initdata.id);
+                    } catch (e) {
+                        console.log(e.message)
+                    }
+                    //渲染人员列表
+                    loadRenyuanTable();
+                });
+                return false;
             }
         });
     }
+    //提交数据
+    function commitData(method, msg, formid,freshview) {
+        //处理表单字段
+        var formdata = $(formid).serialize();
+        // formdata += '&id='+$('#bdcode').val()+$('input[name="H1"]').val();
+        $.ajax({
+            //几个参数需要注意一下
+            type: "POST", //方法类型
+            dataType: "json", //预期服务器返回的数据类型
+            url: serveraddr + method, //url
+            data: formdata,
+            success: function (result) {
+                // console.log(result);//打印服务端返回的数据(调试用)
+                layui.layer.msg(msg);
+                freshview();
+            },
+            error: function (p1, p2) {
+                // console.log(p1);
+                layui.layer.msg(p1.responseText);
+            }
+        });
+        layui.layer.close(layui.layer.index);
+    }
     //提交住户数据
-    function commitZhuhu(method,msg){
-       //处理表单字段
-       var formdata = $('#huform').serialize();
-       // formdata += '&id='+$('#bdcode').val()+$('input[name="H1"]').val();
-       $.ajax({
-           //几个参数需要注意一下
-           type: "POST", //方法类型
-           dataType: "json", //预期服务器返回的数据类型
-           url: serveraddr+method, //url
-           data: formdata,
-           success: function (result) {
-               // console.log(result);//打印服务端返回的数据(调试用)
-               layui.layer.msg(msg);
-               loadZhuhuTable();
-           },
-           error: function (p1, p2) {
-               // console.log(p1);
-               layui.layer.msg(p1.responseText);
-           }
-       });
-       layui.layer.close(layui.layer.index);
+    function commitRenyuan(method, msg) {
+        commitData("renyuan/"+method, msg, '#renyuanform',loadRenyuanTable);
+    }
+    //保存新增人员数据
+    function addRenyuan() {
+        commitRenyuan("save", '添加成功');
+    }
+    //更新住户数据
+    function updateRenyuan() {
+        commitRenyuan("update", '更新成功');
+    }
+    //提交住户数据
+    function commitZhuhu(method, msg) {
+        commitData("zhuhu/"+method, msg, '#huform',loadZhuhuTable);
     }
     //保存新增住户数据
     function addZhuhu() {
-        commitZhuhu("zhuhu/save",'添加成功');
+        commitZhuhu("save", '添加成功');
     }
     //更新住户数据
-    function updateZhuhu(){
-        commitZhuhu("zhuhu/update",'更新成功');
+    function updateZhuhu() {
+        commitZhuhu("update", '更新成功');
     }
     //修改属性
     attInspector.on("attribute-change", function (evt) {
@@ -537,9 +699,13 @@ require([
     function activateEditTool(graphic) {
         var tool = 0;
         tool = tool | Edit.MOVE;
-        tool = tool | Edit.EDIT_VERTICES;
+        if(curtool=='edit'){
+            tool = tool | Edit.EDIT_VERTICES;
+        }
+        else {
         tool = tool | Edit.SCALE;
         tool = tool | Edit.ROTATE;
+        }
         var options = {
             //   allowAddVertices: registry.byId("vtx_ca").checked,
             //   allowDeleteVertices: registry.byId("vtx_cd").checked,

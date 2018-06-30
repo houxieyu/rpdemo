@@ -7,5 +7,5 @@ import com.demo.common.model.base.BaseRenyuan;
  */
 @SuppressWarnings("serial")
 public class Renyuan extends BaseRenyuan<Renyuan> {
-	
+	public static final Renyuan dao = new Renyuan().dao();
 }
