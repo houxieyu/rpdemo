@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <!-- <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests"> -->
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <title>普查区建筑物标绘PAD端</title>
+    <style>
+        html,
+        body,
+        #map {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            width: 100%;
+        }
+
+        #ui {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            z-index: 100;
+        }
+
+        #ui button i {
+            color: darkgreen
+        }
+
+        #BasemapToggle {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            z-index: 50;
+        }
+
+        #ui {
+            display: inline-block
+        }
+    </style>
+    <link rel="stylesheet" href="layui/css/layui.css">
+    <script src="layui/layui.js"></script>
+    <!-- <link rel="stylesheet" href="https://js.arcgis.com/3.18/esri/themes/calcite/dijit/calcite.css">
+    <link rel="stylesheet" href="https://js.arcgis.com/3.18/esri/themes/calcite/esri/esri.css"> -->
+    <link href="//netdna.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="conf.js"></script>
+    <script type="text/javascript">
+        document.write("<link rel='stylesheet' href='" + libpath + "/dijit/themes/claro/claro.css' />");
+        document.write("<link rel='stylesheet' href='" + libpath + "/esri/css/esri.css' />");
+        document.write("<script src='" + libpath + "/init.js'></scr" + "ipt>");
+    </script>
+    <!-- <link href="bootstrap.min.css" rel="stylesheet"> -->
+    <script src="jquery.min.js"></script>
+    <script src="pad.js"></script>
+</head>
+
+<body class="claro">
+    <div id="map" >
+        <!-- <div id="titleInfo">
+            <span id="titletext">GIS3D可视化技术展示</span>
+        </div> -->
+
+        <div id="ui">
+
+            <!-- 建筑物绘制工具 -->
+            <div id='drawdtools'>
+                <button id="bt_freehand" data-type="FREEHAND_POLYGON">
+                    <i class="fa fa-pencil fa-lg"></i> 自由绘制</button>
+                <button id="bt_rectangle" data-type="RECTANGLE">
+                    <i class="fa fa-square fa-lg"></i> 矩形</button>
+                <button id="bt_triangle" data-type="TRIANGLE">
+                    <i class="fa fa-play fa-lg"></i> 三角形</button>
+                <button id="bt_circle" data-type="CIRCLE">
+                    <i class="fa fa-circle fa-lg"></i> 圆形</button>
+                <!-- <button id="bt_ellipse" data-type="ELLIPSE">
+                    <i class="fa fa-circle fa-lg"></i> 椭圆</button> -->
+                <!--<button id="btpiao">开启飘窗</button>-->
+            </div>
+            <div id='edittools'>
+                <button id="bt_edit" data-tool="edit" data-cursor="hand">
+                    <i class="fa fa-edit fa-lg"></i> 编辑图形</button>
+                <button id="bt_attr" data-tool="attr" data-cursor="help">
+                    <i class="fa fa-table fa-lg"></i> 属性</button>
+                    <button id="bt_label" data-cursor="help">
+                        <i class="fa fa-bookmark fa-lg"></i> 显示标注</button>
+            </div>
+
+        </div>
+        <div id='BasemapToggle'></div>
+        <div id='huinfo' style="display: none">
+        <table id="tablehu" ></table></div>
+        <!-- <div style="position:absolute; left:60px; top:10px; z-Index:999;">
+            <div id="titlePane1"  data-dojo-props="title:'测量工具', closable:false, open:false">
+                <div id="measurementDiv"></div>
+                <span style="font-size:smaller;padding:5px 5px;"></span>
+            </div>
+        </div> -->
+    </div>
+</body>
+
+</html>
