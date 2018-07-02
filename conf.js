@@ -8,6 +8,8 @@ var googletileaddr = 'http://{subDomain}.google.cn/vt/lyrs=m@167000000&hl=zh-CN&
 var googlesataddr = 'http://{subDomain}.google.cn/vt/lyrs=s&hl=zh-CN&gl=cn&x={col}&y={row}&z={level}'
 var tdtsataddr = 'http://{subDomain}.tianditu.com/DataServer?T=img_w&X={col}&Y={row}&L={level}'
 var tdtvecaddr = 'http://{subDomain}.tianditu.com/DataServer?T=vec_w&X={col}&Y={row}&L={level}'
+var gdvecaddr = 'http://{subDomain}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={col}&y={row}&z={level}'
+var gdsataddr = 'http://{subDomain}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=6&x={col}&y={row}&z={level}'
 var tiledownaddr=tdtvecaddr;
 var basemaps = [{name:'open street map',value:'osm'},
     {name:'arcgis街道',value:'streets'},
@@ -15,9 +17,13 @@ var basemaps = [{name:'open street map',value:'osm'},
     {name:'谷歌街道',url:googletileaddr,subdomains:['mt2']},
     {name:'谷歌卫星',url:googlesataddr,subdomains:['mt2']},
     {name:'天地图街道',url:tdtvecaddr,subdomains:["t0", "t1", "t2"]},
-    {name:'天地图卫星',url:tdtsataddr,subdomains:["t0", "t1", "t2"]}]
+    {name:'天地图卫星',url:tdtsataddr,subdomains:["t0", "t1", "t2"]},
+    {name:'高德街道',url:gdvecaddr,subdomains:["webrd01", "webrd02", "webrd03"]},
+    {name:'高德卫星',url:gdsataddr,subdomains:["webrd01", "webrd02", "webrd03"]}]
 var downsource = [{name:'open street map',url:osmtileaddr},
 {name:'谷歌街道',url:googletileaddr.replace('{subDomain}','mt2')},
 {name:'谷歌卫星',url:googlesataddr.replace('{subDomain}','mt2')},
 {name:'天地图街道',url:tdtvecaddr.replace('{subDomain}','t0')},
-{name:'天地图卫星',url:tdtsataddr.replace('{subDomain}','t0')}]
+{name:'天地图卫星',url:tdtsataddr.replace('{subDomain}','t0')},
+{name:'高德街道',url:gdvecaddr.replace('{subDomain}','webrd01')},
+{name:'高德卫星',url:gdsataddr.replace('{subDomain}','webrd01')}]

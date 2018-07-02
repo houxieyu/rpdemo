@@ -191,8 +191,8 @@
             //获取瓦片左上角、右下角经纬度坐标
             function getcorner(x, y) {
                 return {
-                    lt: TileLnglatTransformGoogle.pixelToLnglat(0, 0, x, y, tilelvl),
-                    rb: TileLnglatTransformGoogle.pixelToLnglat(255, 255, x, y, tilelvl)
+                    lt: TileLnglatTransformGoogle.pixelToLnglat(-1, -1, x, y, tilelvl),
+                    rb: TileLnglatTransformGoogle.pixelToLnglat(256, 256, x, y, tilelvl)
                 };
 
             }
