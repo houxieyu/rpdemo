@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <style>
+        html,
+        body,
+        #map {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <link rel="stylesheet" href="layui/css/layui.css">
+    <script src="layui/layui.js"></script>
+    <!-- <link rel="stylesheet" href="https://js.arcgis.com/3.18/esri/themes/calcite/dijit/calcite.css">
+    <link rel="stylesheet" href="https://js.arcgis.com/3.18/esri/themes/calcite/esri/esri.css"> -->
+    <link href="//netdna.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="conf.js"></script>
+    <script type="text/javascript">
+        var dojoConfig = {
+            packages: [
+                { "name": "tiledown", "location": location.pathname.replace(/\/[^/]+$/, '/tiledown') }
+            ]
+        };
+        document.write("<link rel='stylesheet' href='" + libpath + "/dijit/themes/claro/claro.css' />");
+        document.write("<link rel='stylesheet' href='" + libpath + "/esri/css/esri.css' />");
+        document.write("<script src='" + libpath + "/init.js'></scr" + "ipt>");
+    </script>
+    <!-- <link href="bootstrap.min.css" rel="stylesheet"> -->
+    <script src="jquery.min.js"></script>
+</head>
+
+<body>
+    <div id='map'></div>
+</body>
+<script>
+    require([
+        'tiledown/coordtrans',  "esri/SpatialReference","esri/layers/WebTiledLayer",
+        "esri/map", "esri/dijit/BasemapToggle",
+        "dojo/dom", "esri/layers/LabelClass", "esri/symbols/TextSymbol",
+        "esri/dijit/Measurement", "esri/dijit/InfoWindow",
+        "esri/toolbars/draw", "esri/symbols/Font",
+        "esri/toolbars/edit",
+        "esri/graphic", "esri/Color",
+        "esri/tasks/GeometryService",
+        "esri/layers/FeatureLayer",
+        "esri/renderers/UniqueValueRenderer",
+        "esri/symbols/PictureMarkerSymbol",
+        "esri/symbols/SimpleMarkerSymbol",
+        "esri/symbols/SimpleLineSymbol",
+        "esri/symbols/SimpleFillSymbol",
+        "dojo/_base/event", "esri/tasks/query", "esri/dijit/AttributeInspector", "dojo/dom-construct", "dijit/form/Button",
+        "dojo/parser",
+        "dojo/domReady!"
+    ], function (
+        TileLnglatTransform,SpatialReference,WebTiledLayer,
+        Map, BasemapToggle,
+        dom, LabelClass, TextSymbol,
+        Measurement, InfoWindow, Draw, Font,
+        Edit, Graphic, Color, GeometryService,
+        FeatureLayer, UniqueValueRenderer, PictureMarkerSymbol,
+        SimpleMarkerSymbol, SimpleLineSymbol, SimpleFillSymbol, event, Query, AttributeInspector, domConstruct, Button,
+        parser
+    ) {
+            parser.parse();
+            esriConfig.defaults.geometryService = new GeometryService("https://utility.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer");
+            // var infoWindow = new InfoWindow({}, domConstruct.create("div"));
+            // infoWindow.startup();
+            //初始化底图
+            var map = new Map("map", {
+                // basemap: "streets",
+                // infoWindow: infoWindow,
+                center: [117.05, 36.7],
+                zoom: 15,
+                showLabels: true
+            });
+            var cycleMap = new WebTiledLayer('http://mt2.google.cn/vt/lyrs=m@167000000&hl=zh-CN&gl=cn&x={col}&y={row}&z={level}&s=Galil');
+            map.addLayer(cycleMap);
+            //初始化边界、建筑物图层
+            var areacode = '370102008015';
+            //依据区划码，过滤村级边界和建筑物图层
+            var layerCunBJ = new FeatureLayer(fsurl + "3", new layerpars("AREA_CODE like '" + areacode + "%' or AREA_CODE is null"));
+            layerCunBJ.setShowLabels(true);
+            layers = [layerCunBJ];
+            map.addLayers(layers);
+            //图层加载完成，将地图缩放至建筑物图层范围
+            layerCunBJ.on('update-end', function () {
+                // 根据地图平台使用转换类
+                var TileLnglatTransformGoogle = TileLnglatTransform.TileLnglatTransformGoogle;
+                console.log(layerCunBJ.fullExtent)
+                var sr = new SpatialReference(4326);
+                var gts = [];
+                layerCunBJ.graphics.forEach(ft => {
+                    gts.push(ft.geometry);
+                });
+                console.log(gts);
+                var project = esriConfig.defaults.geometryService.project(gts, sr);
+
+                project.then(function (result) {
+                    console.log(result);
+                    // console.log("project successful: ", result);
+                    result.forEach(element => {
+                        element.rings[0].forEach(coord => {
+                            console.log(coord);
+                            var out = TileLnglatTransformGoogle.lnglatToTile(coord[0],coord[1],21);
+                            $('body').append('<img src="'+'http://mt2.google.cn/vt/lyrs=m@167000000&hl=zh-CN&gl=cn&x='+out.tileX+'&y='+out.tileY+'&z=21&s=Galil'+'"/>');
+                            console.log(out);
+                        });
+                    });
+                }, function(){});
+
+                FullExtent();
+            });
+
+            //图层初始化参数
+            function layerpars(DefinitionExpression) {
+                this.mode = FeatureLayer.MODE_SNAPSHOT;
+                this.outFields = ["*"];
+                this.showLabels = false;
+                this.minScale = 0;
+                this.maxScale = 0;
+                this.definitionExpression = DefinitionExpression;
+            }
+            //地图缩放至建筑物图层
+            function FullExtent() {
+                //map.setExtent(featureLayer.fullExtent);
+                require([
+                    "esri/graphicsUtils", "dojo/domReady!"
+                ], function (graphicsUtils) {
+                    if (layerCunBJ.graphics.length > 0) {
+                        var myFeatureExtent = graphicsUtils.graphicsExtent(layerCunBJ.graphics);
+                        map.setExtent(myFeatureExtent);
+                        //  map.setExtent(layerCunBJ.fullExtent);
+                        
+                    }
+                });
+            }
+
+
+        });
+</script>
+
+</html>
