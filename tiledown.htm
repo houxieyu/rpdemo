@@ -48,14 +48,20 @@
 <body>
     <div id='map'>
         <div id="ui">
-        <button id='hideimg'>显示图片层</button>
-        <button id='hidebase'>显示底图层</button>
-        选择底图
-        <select id='base'>
-        </select>
-        抓取图源：
-        <select id='down'>
-        </select></div>
+            <button id='hideimg'>显示图片层</button>
+            <button id='hidebase'>显示底图层</button>
+            选择底图
+            <select id='base'>
+            </select>
+            抓取图源：
+            <select id='down'>
+            </select>
+            抓取层级：
+            <select id='lvl'>
+
+            </select>
+            经纬度：<span id='coord'></span>
+        </div>
     </div>
 </body>
 <script>
@@ -65,9 +71,12 @@
     downsource.forEach((element, idx) => {
         $('#down').append('<option value="' + idx + '">' + element.name + '</option>')
     });
-
+    for (var i = 1; i <= 21; i++) {
+        $('#lvl').append('<option value="' + i + '">' + i + '</option>')
+    }
+    $('#lvl').val(17);
     require([
-        'lib/coordtrans','lib/loadtiles', "esri/SpatialReference", "esri/layers/WebTiledLayer",
+        'lib/coordtrans', 'lib/loadtiles', "esri/SpatialReference", "esri/layers/WebTiledLayer",
         "esri/map", "esri/dijit/BasemapToggle", "esri/layers/MapImageLayer",
         "dojo/dom", "esri/layers/LabelClass", "esri/symbols/TextSymbol",
         "esri/dijit/Measurement", "esri/dijit/InfoWindow",
@@ -83,10 +92,10 @@
         "esri/symbols/SimpleFillSymbol",
         "dojo/_base/event", "esri/tasks/query", "esri/dijit/AttributeInspector", "dojo/dom-construct",
         "dijit/form/Button", 'lib/loadtdt',
-        "dojo/parser",
+        "dojo/parser", "esri/geometry/Extent", 
         "dojo/domReady!"
     ], function (
-        TileLnglatTransform, loadtiles,SpatialReference, WebTiledLayer,
+        TileLnglatTransform, loadtiles, SpatialReference, WebTiledLayer,
         Map, BasemapToggle, MapImageLayer,
         dom, LabelClass, TextSymbol,
         Measurement, InfoWindow, Draw, Font,
@@ -96,179 +105,185 @@
         FeatureLayer, UniqueValueRenderer, PictureMarkerSymbol,
         SimpleMarkerSymbol, SimpleLineSymbol, SimpleFillSymbol, event, Query, AttributeInspector, domConstruct,
         Button, loadtdt,
-        parser
+        parser,Extent
     ) {
-        parser.parse();
-        console.log(esriBasemaps.streets);
-        esriConfig.defaults.geometryService = new GeometryService(
-            "https://utility.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer");
-        // var infoWindow = new InfoWindow({}, domConstruct.create("div"));
-        // infoWindow.startup();
-        //初始化底图
-        var initparas = {
-            // basemap: "streets",
-            // infoWindow: infoWindow,
-            center: [117.05, 36.7],
-            zoom: 15,
-            showLabels: true,
-            logo: false
-        };
-        if (basemaps[0].value) initparas.basemap = basemaps[0].value;
-        var map = new Map("map", initparas);
-        //加载天地图
-        // loadtdt.loadtdt(map);
-        if (basemaps[0].url) {
-            loadtiles.loadtiles(map, basemaps[0].url, basemaps[0].subdomains,WebTiledLayer);
-        }
-
-        $('#base').change(function () {
-            map.removeLayer(map.getLayer(map.layerIds[0]));
-            if (basemaps[$('#base').val()].value) map.setBasemap(basemaps[$('#base').val()].value);
-            else if(basemaps[$('#base').val()].url){
-                loadtiles.loadtiles(map, basemaps[$('#base').val()].url, basemaps[$('#base').val()].subdomains,WebTiledLayer);
+            parser.parse();
+            console.log(esriBasemaps.streets);
+            esriConfig.defaults.geometryService = new GeometryService(
+                "https://utility.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer");
+            // var infoWindow = new InfoWindow({}, domConstruct.create("div"));
+            // infoWindow.startup();
+            //初始化map框架
+            var initparas = {
+                // basemap: "streets",
+                // infoWindow: infoWindow,
+                center: [117.05, 36.7],
+                zoom: 15,
+                showLabels: true,
+                extent: new Extent({ "xmin": 110, "ymin": 24, "xmax": 125, "ymax": 27.5, spatialReference:{wkid:4326}}),
+                logo: false
+            };
+            //加载底图区分arcgis内置和webtiled图层
+            if (basemaps[0].value) initparas.basemap = basemaps[0].value;
+            var map = new Map("map", initparas);
+            if (basemaps[0].url) {
+                loadtiles.loadtiles(map, basemaps[0].url, basemaps[0].subdomains, WebTiledLayer);
             }
-        });
-        $('#down').change(function () {
-            downtile();
-        });
-        var showbase = true;
-        $('#hidebase').click(function() {
-            //关闭basemap显示
-            // var id = map.basemapLayerIds[0]; //拿到底图ID
-            map.getLayer(map.layerIds[0]).setVisibility(showbase = !showbase);
-        });
-
-        //谷歌地图，有偏移
-        // var cycleMap = new WebTiledLayer('http://mt2.google.cn/vt/lyrs=m@167000000&hl=zh-CN&gl=cn&x={col}&y={row}&z={level}&s=Galil');
-        // map.addLayer(cycleMap);
-
-        //初始化边界、建筑物图层
-        var areacode = '370102008015';
-        //依据区划码，过滤村级边界和建筑物图层
-        var layerCunBJ = new FeatureLayer(fsurl + "3", new layerpars("AREA_CODE like '" + areacode +
-            "%'"));
-        layerCunBJ.setShowLabels(true);
-        layers = [layerCunBJ];
-        map.addLayers(layers);
-        //设置ImageLayer
-        var mil = new esri.layers.MapImageLayer();
-        map.addLayer(mil);
-        var showimglayer = true;
-        $('#hideimg').click(function () {
-            mil.setVisibility(showimglayer = !showimglayer);
-        });
-
-        //抓图核心
-        function downtile(){
-            mil.removeAllImages();
-            // 根据地图平台使用转换类
-            var TileLnglatTransformGoogle = TileLnglatTransform.TileLnglatTransformGoogle;
-            var sr = new SpatialReference(4326);
-            // var gts = [];
-            // layerCunBJ.graphics.forEach(ft => {
-            //     gts.push(ft.geometry);
-            // });
-            // console.log(gts);
-            var ext = graphicsUtils.graphicsExtent(layerCunBJ.graphics);
-            // var ext = map.geographicExtent;
-            var project = esriConfig.defaults.geometryService.project([ext], sr);
-            var tilelvl = 17;
-
-            //根据经纬度获取瓦片坐标和瓦片左上角经纬度
-            function coordproc(x, y) {
-                var tilexycoord = TileLnglatTransformGoogle.lnglatToTile(x, y, tilelvl);
-                var tilellcoord = TileLnglatTransformGoogle.pixelToLnglat(0, 0, tilexycoord.tileX,
-                    tilexycoord.tileY, tilelvl);
-                // console.log(tilexycoord);
-                // console.log(tilellcoord);
-                return {
-                    tilexycoord: TileLnglatTransformGoogle.lnglatToTile(x, y, tilelvl),
-                    tilellcoord: TileLnglatTransformGoogle.pixelToLnglat(0, 0, tilexycoord.tileX,
-                        tilexycoord.tileY, tilelvl)
-                }
-
-            }
-            //获取瓦片左上角、右下角经纬度坐标
-            function getcorner(x, y) {
-                return {
-                    lt: TileLnglatTransformGoogle.pixelToLnglat(-1, -1, x, y, tilelvl),
-                    rb: TileLnglatTransformGoogle.pixelToLnglat(256, 256, x, y, tilelvl)
-                };
-
-            }
-            project.then(function (result) {
-
-                // console.log(result);
-                // console.log("project successful: ", result);
-                var arealt = coordproc(result[0].xmin, result[0].ymax);
-                var arearb = coordproc(result[0].xmax, result[0].ymin);
-                for (tiley = arealt.tilexycoord.tileY; tiley <= arearb.tilexycoord.tileY; tiley++) {
-                    for (tilex = arealt.tilexycoord.tileX; tilex <= arearb.tilexycoord.tileX; tilex++) {
-                        var corner = getcorner(tilex, tiley);
-                        // console.log(corner)
-                        var mi = new esri.layers.MapImage({
-                            'extent': {
-                                'xmin': corner.lt.lng,
-                                'ymin': corner.rb.lat,
-                                'xmax': corner.rb.lng,
-                                'ymax': corner.lt.lat,
-                                'spatialReference': {
-                                    'wkid': 4326
-                                }
-                            },
-                            'href': downsource[$('#down').val()].url.replace('{col}', tilex)
-                                .replace('{row}',
-                                    tiley).replace('{level}', tilelvl)
-                        });
-                        mil.addImage(mi);
-                        // $('body').append('<img src="'+'http://mt2.google.cn/vt/lyrs=m@167000000&hl=zh-CN&gl=cn&x='+tilex+'&y='+tiley+'&z='+tilelvl+'&s=Galil'+'"/>');
-                    }
-                }
-                // element.rings[0].forEach(coord => {
-                //     // console.log(coord);
-                //     var tilexycoord = TileLnglatTransformGoogle.lnglatToTile(coord[0],coord[1],21);
-                //     var tilellcoord = TileLnglatTransformGoogle.pixelToLnglat(0,0,tilexycoord.tileX,tilexycoord.tileY,21);
-                //     $('body').append('<img src="'+'http://mt2.google.cn/vt/lyrs=m@167000000&hl=zh-CN&gl=cn&x='+tilexycoord.tileX+'&y='+tilexycoord.tileY+'&z=21&s=Galil'+'"/>');
-                //     console.log(tilexycoord);
-                //     console.log(tilellcoord);
-                // });
-                // });
-            }, function () {});
-
-
-        }
-        //图层加载完成，将地图缩放至建筑物图层范围
-        layerCunBJ.on('update-end', function () {
-            downtile();
-            FullExtent();
-        });
-
-        //图层初始化参数
-        function layerpars(DefinitionExpression) {
-            this.mode = FeatureLayer.MODE_SNAPSHOT;
-            this.outFields = ["*"];
-            this.showLabels = false;
-            this.minScale = 0;
-            this.maxScale = 0;
-            this.definitionExpression = DefinitionExpression;
-        }
-        //地图缩放至建筑物图层
-        function FullExtent() {
-            //map.setExtent(featureLayer.fullExtent);
-            require([
-                "esri/graphicsUtils", "dojo/domReady!"
-            ], function (graphicsUtils) {
-                if (layerCunBJ.graphics.length > 0) {
-                    var myFeatureExtent = graphicsUtils.graphicsExtent(layerCunBJ.graphics);
-                    map.setExtent(myFeatureExtent);
-                    //  map.setExtent(layerCunBJ.fullExtent);
-
+            //UI响应，参数修改
+            $('#base').change(function () {
+                map.removeLayer(map.getLayer(map.layerIds[0]));
+                if (basemaps[$('#base').val()].value) map.setBasemap(basemaps[$('#base').val()].value);
+                else if (basemaps[$('#base').val()].url) {
+                    loadtiles.loadtiles(map, basemaps[$('#base').val()].url, basemaps[$('#base').val()].subdomains, WebTiledLayer);
                 }
             });
-        }
+            $('#down').change(function () {
+                downtile();
+            });
+            $('#lvl').change(function () {
+                downtile();
+            });
+            
+            var showbase = true;
+            $('#hidebase').click(function () {
+                //关闭basemap显示
+                // var id = map.basemapLayerIds[0]; //拿到底图ID
+                map.getLayer(map.layerIds[0]).setVisibility(showbase = !showbase);
+            });
+            //
+            map.on('load',function(){
+                console.log(map.spatialReference);
+            });
+            //鼠标移动
+            map.on('click',function(evt){
+                // console.log(evt);
+                var project = esriConfig.defaults.geometryService.project([new esri.geometry.Point(evt.mapPoint.x,evt.mapPoint.y,evt.mapPoint.spatialReference)],new SpatialReference({wkid:4326}));
+                project.then(function(result){
+                    $('#coord').text(result[0].x+','+result[0].y);
+                    // console.log(result);
+                });
+            });
+            //初始化边界、建筑物图层
+            var areacode = '370102008015';
+            //依据区划码，过滤村级边界和建筑物图层
+            var layerCunBJ = new FeatureLayer(fsurl + "3", new layerpars("AREA_CODE like '" + areacode +
+                "%'"));
+            layerCunBJ.setShowLabels(true);
+            layers = [layerCunBJ];
+            map.addLayers(layers);
+            //设置ImageLayer
+            var mil = new esri.layers.MapImageLayer();
+            map.addLayer(mil);
+            var showimglayer = true;
+            $('#hideimg').click(function () {
+                mil.setVisibility(showimglayer = !showimglayer);
+            });
+
+            //抓图核心
+            function downtile() {
+                mil.removeAllImages();
+                // 根据地图平台使用转换类
+                var TileLnglatTransformGaode = TileLnglatTransform.TileLnglatTransformGaode;
+                var sr = new SpatialReference(4326);
+
+                var ext = graphicsUtils.graphicsExtent(layerCunBJ.graphics);
+                // var ext = map.geographicExtent;
+                var project = esriConfig.defaults.geometryService.project([ext], sr);
+                var tilelvl = parseInt($('#lvl').val());
+
+                //根据经纬度获取瓦片坐标和瓦片左上角经纬度
+                function coordproc(x, y) {
+                    var tilexycoord = TileLnglatTransformGaode.lnglatToTile(x, y, tilelvl);
+                    var tilellcoord = TileLnglatTransformGaode.pixelToLnglat(0, 0, tilexycoord.tileX,
+                        tilexycoord.tileY, tilelvl);
+                    return {
+                        tilexycoord: TileLnglatTransformGaode.lnglatToTile(x, y, tilelvl),
+                        tilellcoord: TileLnglatTransformGaode.pixelToLnglat(0, 0, tilexycoord.tileX,
+                            tilexycoord.tileY, tilelvl)
+                    }
+
+                }
+                //获取瓦片左上角、右下角经纬度坐标
+                function getcorner(x, y) {
+                    return {
+                        lt: TileLnglatTransformGaode.pixelToLnglat(-1, -1, x, y, tilelvl),
+                        rb: TileLnglatTransformGaode.pixelToLnglat(256, 256, x, y, tilelvl)
+                    };
+
+                }
+                project.then(function (result) {
+
+                    // console.log(result);
+                    // console.log("project successful: ", result);
+                    var arealt = coordproc(result[0].xmin, result[0].ymax);
+                    var arearb = coordproc(result[0].xmax, result[0].ymin);
+                    for (tiley = arealt.tilexycoord.tileY; tiley <= arearb.tilexycoord.tileY; tiley++) {
+                        for (tilex = arealt.tilexycoord.tileX; tilex <= arearb.tilexycoord.tileX; tilex++) {
+                            var corner = getcorner(tilex, tiley);
+                            // console.log(corner)
+                            var mi = new esri.layers.MapImage({
+                                'extent': {
+                                    'xmin': corner.lt.lng,
+                                    'ymin': corner.rb.lat,
+                                    'xmax': corner.rb.lng,
+                                    'ymax': corner.lt.lat,
+                                    'spatialReference': {
+                                        'wkid': 4326
+                                    }
+                                },
+                                'href': downsource[$('#down').val()].url.replace('{col}', tilex)
+                                    .replace('{row}',
+                                        tiley).replace('{level}', tilelvl)
+                            });
+                            mil.addImage(mi);
+                            // $('body').append('<img src="'+'http://mt2.google.cn/vt/lyrs=m@167000000&hl=zh-CN&gl=cn&x='+tilex+'&y='+tiley+'&z='+tilelvl+'&s=Galil'+'"/>');
+                        }
+                    }
+                    // element.rings[0].forEach(coord => {
+                    //     // console.log(coord);
+                    //     var tilexycoord = TileLnglatTransformGaode.lnglatToTile(coord[0],coord[1],21);
+                    //     var tilellcoord = TileLnglatTransformGaode.pixelToLnglat(0,0,tilexycoord.tileX,tilexycoord.tileY,21);
+                    //     $('body').append('<img src="'+'http://mt2.google.cn/vt/lyrs=m@167000000&hl=zh-CN&gl=cn&x='+tilexycoord.tileX+'&y='+tilexycoord.tileY+'&z=21&s=Galil'+'"/>');
+                    //     console.log(tilexycoord);
+                    //     console.log(tilellcoord);
+                    // });
+                    // });
+                }, function () { });
 
 
-    });
+            }
+            //图层加载完成，将地图缩放至建筑物图层范围
+            layerCunBJ.on('update-end', function () {
+                downtile();
+                FullExtent();
+            });
+
+            //图层初始化参数
+            function layerpars(DefinitionExpression) {
+                this.mode = FeatureLayer.MODE_SNAPSHOT;
+                this.outFields = ["*"];
+                this.showLabels = false;
+                this.minScale = 0;
+                this.maxScale = 0;
+                this.definitionExpression = DefinitionExpression;
+            }
+            //地图缩放至建筑物图层
+            function FullExtent() {
+                //map.setExtent(featureLayer.fullExtent);
+                require([
+                    "esri/graphicsUtils", "dojo/domReady!"
+                ], function (graphicsUtils) {
+                    if (layerCunBJ.graphics.length > 0) {
+                        var myFeatureExtent = graphicsUtils.graphicsExtent(layerCunBJ.graphics);
+                        map.setExtent(myFeatureExtent);
+                        //  map.setExtent(layerCunBJ.fullExtent);
+
+                    }
+                });
+            }
+
+
+        });
 </script>
 
 </html>
