@@ -60,7 +60,12 @@
             <select id='lvl'>
 
             </select>
-            经纬度：<span id='coord'></span>
+            抓取范围：
+            <select id='ext' name='ext'>
+                <option value='0'>普查区范围</option>
+                <option value='1'>当前地图显示范围</option>
+                </select>
+                经纬度：<span id='coord'></span>
         </div>
     </div>
 </body>
@@ -76,7 +81,7 @@
     }
     $('#lvl').val(17);
     require([
-        'lib/coordtrans', 'lib/loadtiles', "esri/SpatialReference", "esri/layers/WebTiledLayer",
+        'lib/coordtrans',  "esri/SpatialReference", "esri/layers/WebTiledLayer",'lib/loadtiles',
         "esri/map", "esri/dijit/BasemapToggle", "esri/layers/MapImageLayer",
         "dojo/dom", "esri/layers/LabelClass", "esri/symbols/TextSymbol",
         "esri/dijit/Measurement", "esri/dijit/InfoWindow",
@@ -95,7 +100,7 @@
         "dojo/parser", "esri/geometry/Extent", 
         "dojo/domReady!"
     ], function (
-        TileLnglatTransform, loadtiles, SpatialReference, WebTiledLayer,
+        TileLnglatTransform, SpatialReference, WebTiledLayer, loadtiles,
         Map, BasemapToggle, MapImageLayer,
         dom, LabelClass, TextSymbol,
         Measurement, InfoWindow, Draw, Font,
@@ -127,14 +132,14 @@
             if (basemaps[0].value) initparas.basemap = basemaps[0].value;
             var map = new Map("map", initparas);
             if (basemaps[0].url) {
-                loadtiles.loadtiles(map, basemaps[0].url, basemaps[0].subdomains, WebTiledLayer);
+                loadtiles.loadtiles( basemaps[0].url, basemaps[0].subdomains);
             }
             //UI响应，参数修改
             $('#base').change(function () {
                 map.removeLayer(map.getLayer(map.layerIds[0]));
                 if (basemaps[$('#base').val()].value) map.setBasemap(basemaps[$('#base').val()].value);
                 else if (basemaps[$('#base').val()].url) {
-                    loadtiles.loadtiles(map, basemaps[$('#base').val()].url, basemaps[$('#base').val()].subdomains, WebTiledLayer);
+                    loadtiles.loadtiles( basemaps[$('#base').val()].url, basemaps[$('#base').val()].subdomains);
                 }
             });
             $('#down').change(function () {
@@ -143,7 +148,9 @@
             $('#lvl').change(function () {
                 downtile();
             });
-            
+            $('#ext').change(function () {
+                downtile();
+            });
             var showbase = true;
             $('#hidebase').click(function () {
                 //关闭basemap显示
@@ -185,8 +192,15 @@
                 // 根据地图平台使用转换类
                 var TileLnglatTransformGaode = TileLnglatTransform.TileLnglatTransformGaode;
                 var sr = new SpatialReference(4326);
-
-                var ext = graphicsUtils.graphicsExtent(layerCunBJ.graphics);
+                
+                var ext;
+                if($('#ext').val()=='0'){
+                    ext =  graphicsUtils.graphicsExtent(layerCunBJ.graphics);
+                }
+                else {
+                    ext = map.extent;
+                    // console.log(ext);
+                }
                 // var ext = map.geographicExtent;
                 var project = esriConfig.defaults.geometryService.project([ext], sr);
                 var tilelvl = parseInt($('#lvl').val());
