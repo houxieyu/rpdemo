@@ -112,6 +112,7 @@
         Button, loadtdt,
         parser,Extent
     ) {
+        eWebTiledLayer = WebTiledLayer;
             parser.parse();
             console.log(esriBasemaps.streets);
             esriConfig.defaults.geometryService = new GeometryService(
@@ -130,7 +131,7 @@
             };
             //加载底图区分arcgis内置和webtiled图层
             if (basemaps[0].value) initparas.basemap = basemaps[0].value;
-            var map = new Map("map", initparas);
+            map = new Map("map", initparas);
             if (basemaps[0].url) {
                 loadtiles.loadtiles( basemaps[0].url, basemaps[0].subdomains);
             }
@@ -201,6 +202,7 @@
                     ext = map.extent;
                     // console.log(ext);
                 }
+                console.log(ext);
                 // var ext = map.geographicExtent;
                 var project = esriConfig.defaults.geometryService.project([ext], sr);
                 var tilelvl = parseInt($('#lvl').val());

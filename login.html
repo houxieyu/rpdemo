@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>第七次人口普查试点地理信息系统登录</title>
+<!-- 最新版本的 Bootstrap 核心 CSS 文件 -->
+<link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+<!-- 可选的 Bootstrap 主题文件（一般不用引入） -->
+<link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+<!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+<script src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <style>
+        html {
+            height: 100%;
+        }
+
+        body {
+            background-image: url(img/log.jpg);
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: auto 100%;
+            background-color: #2e93bf;
+        }
+        .logform{
+            position: absolute;
+            top:45%;
+            left:35%;
+        }
+        .logform span{
+            display: inline-block;
+            width: 50px;
+        }
+        .logform input{
+            display: inline-block;
+            width: 150px;
+        }
+        .btnlog{
+            text-align: center;
+
+        }
+        .logform div{
+            padding-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="logform">
+        <div>
+            <span>用户名</span>
+            <input type="text" value="370102008015">
+        </div>
+        <div>
+            <span>密码</span>
+            <input type="password" value="370102008015">
+        </div>
+        <div class="btnlog">
+            <input id="btnlog" class="btn btn-primary" 
+            onclick="window.location.href='application/main.html'"
+            type="button" value="登录">
+        </div>
+    </div>
+</body>
+<script>
+
+</script>
+</html>

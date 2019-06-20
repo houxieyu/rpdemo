@@ -87,8 +87,8 @@ require([
     //建筑图标渲染图层
     var layerbuildingicon = new FeatureLayer(fsurl + "4", layerinitpars);
     //符号渲染器
-    var iconrenderer = new UniqueValueRenderer(new PictureMarkerSymbol('img/建筑.png', 20, 20), "btype");
-    iconrenderer.addValue('0', new PictureMarkerSymbol('img/住宅.png', 20, 20));
+    var iconrenderer = new UniqueValueRenderer(new PictureMarkerSymbol('img/住宅.png', 20, 20), "btype");
+    iconrenderer.addValue('0', new PictureMarkerSymbol('img/建筑.png', 20, 20));
     iconrenderer.addValue('1', new PictureMarkerSymbol('img/商业.png', 20, 20));
     iconrenderer.addValue('2', new PictureMarkerSymbol('img/公用.png', 20, 20));
     layerbuildingicon.setRenderer(iconrenderer);
@@ -162,7 +162,7 @@ require([
             // updateFeature = features[0];
             updateFeature = selft;
             map.infoWindow.setTitle('属性编辑');
-            map.infoWindow.show(curpoint, map.getInfoWindowAnchor(curpoint));
+            map..show(curpoint, map.getInfoWindowAnchor(curpoint));
             $('.atiDeleteButton').removeClass('atiButton');
             $('.atiDeleteButton').addClass('dijitButton');
             // } else {
